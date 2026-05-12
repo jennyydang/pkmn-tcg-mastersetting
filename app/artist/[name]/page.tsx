@@ -1,0 +1,125 @@
+"use client";
+
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getCardsForArtist } from "@/lib/api";
+import { PokemonCard } from "@/lib/types";
+import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import CardGrid from "@/app/components/CardGrid";
+import ProgressBar from "@/app/components/ProgressBar";
+import { ChevronRightIcon } from "@/app/components/Icons";
+import Link from "next/link";
+
+interface Props {
+  params: Promise<{ name: string }>;
+}
+
+export default function ArtistMasterSetPage({ params }: Props) {
+  const { name: encodedName } = use(params);
+  const artist = decodeURIComponent(encodedName);
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [cards, setCards] = useState<PokemonCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "owned" | "missing">("all");
+  const { isCardOwned, toggleCard, hasItem, addItem, updateTotal, trackedItems } = useStore();
+
+  useEffect(() => {
+    if (!authLoading && !user) router.replace("/");
+  }, [user, authLoading, router]);
+
+  const tracked = trackedItems.find((t) => t.id === artist && t.type === "artist");
+  const ownedCount = tracked?.ownedCards.length ?? 0;
+
+  useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true);
+        const fetched = await getCardsForArtist(artist);
+        setCards(fetched);
+        if (!hasItem(artist) && fetched.length > 0) {
+          addItem({
+            type: "artist",
+            id: artist,
+            label: artist,
+            image: fetched[0].images.small,
+            totalCards: fetched.length,
+            ownedCards: [],
+            subtitle: `Artist · ${fetched.length} cards`,
+          });
+        }
+        if (fetched.length > 0) updateTotal(artist, fetched.length);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load cards");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artist]);
+
+  const filteredCards = cards.filter((card) => {
+    if (filter === "owned") return isCardOwned(artist, card.id);
+    if (filter === "missing") return !isCardOwned(artist, card.id);
+    return true;
+  });
+
+  if (authLoading || !user) return (
+    <div className="flex items-center justify-center py-32">
+      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-32 gap-4">
+      <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-gray-500 dark:text-gray-400 text-sm">Loading {artist} cards…</p>
+    </div>
+  );
+
+  if (error) return (
+    <div className="flex flex-col items-center justify-center py-32 gap-4 text-center">
+      <p className="text-red-500 font-medium">{error}</p>
+      <Link href="/" className="text-sm text-blue-600 dark:text-blue-400 underline">← Back to home</Link>
+    </div>
+  );
+
+  return (
+    <div>
+      <nav className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-6">
+        <Link href="/" className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors">Home</Link>
+        <ChevronRightIcon className="w-4 h-4" />
+        <span className="text-gray-900 dark:text-gray-100 font-medium">{artist} Artist Collection</span>
+      </nav>
+
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6 shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-0.5">{artist}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">All cards illustrated by {artist}</p>
+        <ProgressBar owned={ownedCount} total={cards.length} />
+        {ownedCount >= cards.length && cards.length > 0 && (
+          <div className="mt-3 inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
+            🏆 Artist Collection Complete!
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 mb-5">
+        {(["all", "owned", "missing"] as const).map((f) => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors capitalize ${filter === f ? "bg-blue-600 text-white shadow-sm" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-400"}`}>
+            {f === "all" ? `All (${cards.length})` : f === "owned" ? `Owned (${ownedCount})` : `Missing (${cards.length - ownedCount})`}
+          </button>
+        ))}
+      </div>
+
+      {filteredCards.length > 0 ? (
+        <CardGrid cards={filteredCards} isOwned={(cid) => isCardOwned(artist, cid)} onToggle={(cid) => toggleCard(artist, cid)} />
+      ) : (
+        <div className="py-16 text-center text-gray-400 dark:text-gray-600"><p className="text-lg">No cards to show</p></div>
+      )}
+    </div>
+  );
+}

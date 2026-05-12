@@ -54,6 +54,7 @@ export default function MasterSetSearch() {
 
   const sets    = results.filter((r) => r.type === "set");
   const pokemon = results.filter((r) => r.type === "pokemon");
+  const artists = results.filter((r) => r.type === "artist");
   const hasResults = results.length > 0;
 
   return (
@@ -65,7 +66,7 @@ export default function MasterSetSearch() {
             type="text"
             value={query}
             onChange={handleChange}
-            placeholder="Search a Pokémon or set (e.g. Pidgey, 151, Base…)"
+            placeholder="Search a Pokémon, set, or artist (e.g. Pidgey, 151, Ken Sugimori…)"
             className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
             onFocus={() => hasResults && setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -89,6 +90,14 @@ export default function MasterSetSearch() {
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Pokémon</span>
                 </li>
                 {pokemon.map((r) => <ResultRow key={r.id} result={r} onSelect={() => { if (!hasItem(r.id)) setPending(r); setOpen(false); }} alreadyTracking={hasItem(r.id)} />)}
+              </>
+            )}
+            {artists.length > 0 && (
+              <>
+                <li className={`px-4 pb-1 ${sets.length > 0 || pokemon.length > 0 ? "pt-2.5 border-t border-gray-100 dark:border-gray-700 mt-1" : "pt-2.5"}`}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Artists</span>
+                </li>
+                {artists.map((r) => <ResultRow key={`artist:${r.id}`} result={r} onSelect={() => { if (!hasItem(r.id)) setPending(r); setOpen(false); }} alreadyTracking={hasItem(r.id)} />)}
               </>
             )}
           </ul>
@@ -120,17 +129,20 @@ export default function MasterSetSearch() {
                   alt={pending.label}
                   width={pending.type === "set" ? 180 : 100}
                   height={pending.type === "set" ? 70 : 140}
+
                   className="object-contain drop-shadow-lg"
                   unoptimized
                 />
               )}
               <div className="text-center">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-                  Add {pending.label}{pending.type === "pokemon" ? " Master Set" : ""}?
+                  Add {pending.label}{pending.type === "pokemon" ? " Master Set" : pending.type === "artist" ? " Artist Collection" : ""}?
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {pending.type === "pokemon"
                     ? `Track every ${pending.label} card across all sets.`
+                    : pending.type === "artist"
+                    ? `Track every card illustrated by ${pending.label}.`
                     : `Track every card in the ${pending.label} set.`}
                 </p>
               </div>

@@ -65,7 +65,11 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
         onPointerUp: handleLongPressUp,
       };
 
-  const href = type === "set" ? `/sets/${id}` : `/pokemon/${encodeURIComponent(id)}`;
+  const href = type === "set"
+    ? `/sets/${id}`
+    : type === "artist"
+    ? `/artist/${encodeURIComponent(id)}`
+    : `/pokemon/${encodeURIComponent(id)}`;
 
   const cardContent = (
     <>
@@ -81,7 +85,7 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
         <div className="min-w-0">
           <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">{label}</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {type === "pokemon" ? "Master Set" : (subtitle ?? "Set")}
+            {type === "pokemon" ? "Master Set" : type === "artist" ? "Artist Collection" : (subtitle ?? "Set")}
           </p>
         </div>
       </div>

@@ -12,7 +12,7 @@ async function apiFetch<T>(path: string): Promise<T> {
 }
 
 export interface SearchResult {
-  type: "pokemon" | "set";
+  type: "pokemon" | "set" | "artist";
   id: string;
   label: string;
   image: string;
@@ -24,12 +24,15 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  const [setsRes, pokemonRes] = await Promise.allSettled([
+  const [setsRes, pokemonRes, artistRes] = await Promise.allSettled([
     apiFetch<{ data: PokemonSet[] }>(
       `/sets?q=name:${encodeURIComponent(trimmed)}&pageSize=8&orderBy=-releaseDate`
     ),
     apiFetch<{ data: PokemonCard[] }>(
       `/cards?q=name:"${encodeURIComponent(trimmed)}"&pageSize=1&orderBy=-set.releaseDate`
+    ),
+    apiFetch<{ data: PokemonCard[]; totalCount: number }>(
+      `/cards?q=artist:"${encodeURIComponent(trimmed)}"&pageSize=1`
     ),
   ]);
 
@@ -58,6 +61,16 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
     });
   }
 
+  if (artistRes.status === "fulfilled" && artistRes.value.data.length > 0) {
+    results.push({
+      type: "artist",
+      id: trimmed,
+      label: trimmed,
+      image: artistRes.value.data[0].images.small,
+      subtitle: `Artist · ${artistRes.value.totalCount} cards`,
+    });
+  }
+
   return results;
 }
 
@@ -68,6 +81,21 @@ export async function getCardsForPokemon(name: string): Promise<PokemonCard[]> {
   while (true) {
     const data = await apiFetch<{ data: PokemonCard[]; totalCount: number }>(
       `/cards?q=name:${encodeURIComponent(name)}&pageSize=${pageSize}&page=${page}&orderBy=set.releaseDate,number`
+    );
+    all.push(...data.data);
+    if (all.length >= data.totalCount) break;
+    page++;
+  }
+  return all;
+}
+
+export async function getCardsForArtist(artist: string): Promise<PokemonCard[]> {
+  const pageSize = 250;
+  let page = 1;
+  const all: PokemonCard[] = [];
+  while (true) {
+    const data = await apiFetch<{ data: PokemonCard[]; totalCount: number }>(
+      `/cards?q=artist:"${encodeURIComponent(artist)}"&pageSize=${pageSize}&page=${page}&orderBy=set.releaseDate,number`
     );
     all.push(...data.data);
     if (all.length >= data.totalCount) break;

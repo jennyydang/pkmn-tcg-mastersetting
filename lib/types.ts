@@ -24,7 +24,7 @@ export interface PokemonCard {
 }
 
 export interface TrackedMasterSet {
-  type: "pokemon" | "set";
+  type: "pokemon" | "set" | "artist";
   id: string;        // Pokémon name  OR  set.id from the API
   label: string;     // display name
   image: string;
