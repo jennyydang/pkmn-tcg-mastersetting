@@ -1,4 +1,4 @@
-import { PokemonCard, PokemonSet } from "./types";
+import { PokemonCard } from "./types";
 
 const BASE_URL = "https://api.pokemontcg.io/v2";
 
@@ -14,27 +14,16 @@ async function apiFetch<T>(path: string): Promise<T> {
 export interface PokemonEntry {
   name: string;
   image: string;
-  cardCount: number;
 }
 
-export async function searchPokemon(query: string): Promise<PokemonEntry[]> {
+export async function searchPokemon(query: string): Promise<PokemonEntry | null> {
+  const trimmed = query.trim();
+  if (!trimmed) return null;
   const data = await apiFetch<{ data: PokemonCard[] }>(
-    `/cards?q=name:"${encodeURIComponent(query)}"&pageSize=250&orderBy=name`
+    `/cards?q=name:"${encodeURIComponent(trimmed)}"&pageSize=1&orderBy=-set.releaseDate`
   );
-
-  const byName = new Map<string, { image: string; count: number }>();
-  for (const card of data.data) {
-    if (!byName.has(card.name)) {
-      byName.set(card.name, { image: card.images.small, count: 0 });
-    }
-    byName.get(card.name)!.count++;
-  }
-
-  return Array.from(byName.entries()).map(([name, { image, count }]) => ({
-    name,
-    image,
-    cardCount: count,
-  }));
+  if (data.data.length === 0) return null;
+  return { name: trimmed, image: data.data[0].images.small };
 }
 
 export async function getCardsForPokemon(name: string): Promise<PokemonCard[]> {
@@ -44,29 +33,7 @@ export async function getCardsForPokemon(name: string): Promise<PokemonCard[]> {
 
   while (true) {
     const data = await apiFetch<{ data: PokemonCard[]; totalCount: number }>(
-      `/cards?q=name:"${encodeURIComponent(name)}"&pageSize=${pageSize}&page=${page}&orderBy=set.releaseDate`
-    );
-    all.push(...data.data);
-    if (all.length >= data.totalCount) break;
-    page++;
-  }
-
-  return all;
-}
-
-export async function getSet(id: string): Promise<PokemonSet> {
-  const data = await apiFetch<{ data: PokemonSet }>(`/sets/${id}`);
-  return data.data;
-}
-
-export async function getCardsForSet(setId: string): Promise<PokemonCard[]> {
-  const pageSize = 250;
-  let page = 1;
-  const all: PokemonCard[] = [];
-
-  while (true) {
-    const data = await apiFetch<{ data: PokemonCard[]; totalCount: number }>(
-      `/cards?q=set.id:${setId}&pageSize=${pageSize}&page=${page}&orderBy=number`
+      `/cards?q=name:${encodeURIComponent(name)}&pageSize=${pageSize}&page=${page}&orderBy=set.releaseDate,number`
     );
     all.push(...data.data);
     if (all.length >= data.totalCount) break;

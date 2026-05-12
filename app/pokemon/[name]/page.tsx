@@ -2,44 +2,42 @@
 
 import { use, useEffect, useState } from "react";
 import { getCardsForPokemon } from "@/lib/api";
-import { PokemonCard, PokemonSet } from "@/lib/types";
+import { PokemonCard } from "@/lib/types";
 import { useStore } from "@/lib/store";
+import CardGrid from "@/app/components/CardGrid";
+import ProgressBar from "@/app/components/ProgressBar";
 import { ChevronRightIcon } from "@/app/components/Icons";
-import Image from "next/image";
 import Link from "next/link";
 
 interface Props {
   params: Promise<{ name: string }>;
 }
 
-interface SetGroup {
-  set: PokemonSet;
-  cards: PokemonCard[];
-}
-
-export default function PokemonPage({ params }: Props) {
+export default function PokemonMasterSetPage({ params }: Props) {
   const { name: encodedName } = use(params);
   const name = decodeURIComponent(encodedName);
-  const [groups, setGroups] = useState<SetGroup[]>([]);
+  const [cards, setCards] = useState<PokemonCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { addSet, hasSet } = useStore();
+  const [filter, setFilter] = useState<"all" | "owned" | "missing">("all");
+  const { isCardOwned, toggleCard, hasPokemon, addPokemon, updateTotal, trackedPokemon } = useStore();
+
+  const tracked = trackedPokemon.find((p) => p.name === name);
+  const ownedCount = tracked?.ownedCards.length ?? 0;
 
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
-        const cards = await getCardsForPokemon(name);
+        const fetched = await getCardsForPokemon(name);
+        setCards(fetched);
 
-        const bySet = new Map<string, SetGroup>();
-        for (const card of cards) {
-          if (!bySet.has(card.set.id)) {
-            bySet.set(card.set.id, { set: card.set, cards: [] });
-          }
-          bySet.get(card.set.id)!.cards.push(card);
+        if (!hasPokemon(name) && fetched.length > 0) {
+          addPokemon(name, fetched[fetched.length - 1].images.small);
         }
-
-        setGroups(Array.from(bySet.values()));
+        if (fetched.length > 0) {
+          updateTotal(name, fetched.length);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load cards");
       } finally {
@@ -47,9 +45,14 @@ export default function PokemonPage({ params }: Props) {
       }
     }
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
 
-  const totalCards = groups.reduce((n, g) => n + g.cards.length, 0);
+  const filteredCards = cards.filter((card) => {
+    if (filter === "owned") return isCardOwned(name, card.id);
+    if (filter === "missing") return !isCardOwned(name, card.id);
+    return true;
+  });
 
   if (loading) {
     return (
@@ -71,84 +74,52 @@ export default function PokemonPage({ params }: Props) {
 
   return (
     <div>
-      {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-6">
         <Link href="/" className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors">Home</Link>
         <ChevronRightIcon className="w-4 h-4" />
-        <span className="text-gray-900 dark:text-gray-100 font-medium">{name}</span>
+        <span className="text-gray-900 dark:text-gray-100 font-medium">{name} Master Set</span>
       </nav>
 
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{name}</h1>
-        <p className="text-gray-500 dark:text-gray-400">
-          {totalCards} card{totalCards !== 1 ? "s" : ""} across {groups.length} set{groups.length !== 1 ? "s" : ""}
-        </p>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6 shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-0.5">{name} Master Set</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">All {name} cards across every set</p>
+        <ProgressBar owned={ownedCount} total={cards.length} />
+        {ownedCount >= cards.length && cards.length > 0 && (
+          <div className="mt-3 inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
+            🏆 Master Set Complete!
+          </div>
+        )}
       </div>
 
-      {/* Set groups */}
-      {groups.length === 0 ? (
-        <p className="text-gray-500 dark:text-gray-400">No cards found.</p>
-      ) : (
-        <div className="space-y-10">
-          {groups.map(({ set, cards }) => (
-            <section key={set.id}>
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  {set.images?.symbol && (
-                    <Image
-                      src={set.images.symbol}
-                      alt={set.name}
-                      width={24}
-                      height={24}
-                      className="object-contain shrink-0"
-                      unoptimized
-                    />
-                  )}
-                  <div className="min-w-0">
-                    <Link
-                      href={`/sets/${set.id}`}
-                      className="text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block"
-                    >
-                      {set.name}
-                    </Link>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{set.series} · {set.releaseDate}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => addSet(set)}
-                  disabled={hasSet(set.id)}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                    hasSet(set.id)
-                      ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 cursor-default"
-                      : "bg-blue-600 hover:bg-blue-700 text-white"
-                  }`}
-                >
-                  {hasSet(set.id) ? "Tracking" : "+ Track Set"}
-                </button>
-              </div>
+      <div className="flex items-center gap-2 mb-5">
+        {(["all", "owned", "missing"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors capitalize ${
+              filter === f
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-400"
+            }`}
+          >
+            {f === "all"
+              ? `All (${cards.length})`
+              : f === "owned"
+              ? `Owned (${ownedCount})`
+              : `Missing (${cards.length - ownedCount})`}
+          </button>
+        ))}
+      </div>
 
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
-                {cards.map((card) => (
-                  <Link
-                    key={card.id}
-                    href={`/sets/${set.id}`}
-                    title={`${card.name} #${card.number} — ${set.name}`}
-                    className="rounded-lg overflow-hidden hover:scale-105 transition-transform shadow-sm hover:shadow-md"
-                  >
-                    <Image
-                      src={card.images.small}
-                      alt={`${card.name} #${card.number}`}
-                      width={146}
-                      height={204}
-                      className="w-full h-auto block"
-                      unoptimized
-                    />
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ))}
+      {filteredCards.length > 0 ? (
+        <CardGrid
+          cards={filteredCards}
+          isOwned={(cardId) => isCardOwned(name, cardId)}
+          onToggle={(cardId) => toggleCard(name, cardId)}
+        />
+      ) : (
+        <div className="py-16 text-center text-gray-400 dark:text-gray-600">
+          <p className="text-lg">No cards to show</p>
         </div>
       )}
     </div>

@@ -1,24 +1,22 @@
 "use client";
 
 import { PokemonCard } from "@/lib/types";
-import { useStore } from "@/lib/store";
 import Image from "next/image";
 import { useState } from "react";
 
 interface CardItemProps {
   card: PokemonCard;
-  setId: string;
+  owned: boolean;
+  onToggle: () => void;
 }
 
-function CardItem({ card, setId }: CardItemProps) {
-  const { isCardOwned, toggleCard } = useStore();
-  const owned = isCardOwned(setId, card.id);
+function CardItem({ card, owned, onToggle }: CardItemProps) {
   const [imgError, setImgError] = useState(false);
 
   return (
     <button
-      onClick={() => toggleCard(setId, card.id)}
-      title={`${card.name} #${card.number}${owned ? " — Owned" : " — Not owned"}`}
+      onClick={onToggle}
+      title={`${card.name} #${card.number} — ${owned ? "Owned" : "Not owned"}`}
       className={`relative rounded-lg overflow-hidden transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 hover:scale-105 ${
         owned ? "opacity-100 shadow-md" : "opacity-50 hover:opacity-70"
       }`}
@@ -53,14 +51,20 @@ function CardItem({ card, setId }: CardItemProps) {
 
 interface Props {
   cards: PokemonCard[];
-  setId: string;
+  isOwned: (cardId: string) => boolean;
+  onToggle: (cardId: string) => void;
 }
 
-export default function CardGrid({ cards, setId }: Props) {
+export default function CardGrid({ cards, isOwned, onToggle }: Props) {
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 sm:gap-3">
       {cards.map((card) => (
-        <CardItem key={card.id} card={card} setId={setId} />
+        <CardItem
+          key={card.id}
+          card={card}
+          owned={isOwned(card.id)}
+          onToggle={() => onToggle(card.id)}
+        />
       ))}
     </div>
   );

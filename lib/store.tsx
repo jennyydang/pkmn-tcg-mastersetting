@@ -1,70 +1,77 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { TrackedSet, PokemonSet } from "./types";
+import { TrackedPokemon } from "./types";
 
-const STORAGE_KEY = "pkmn-tcg-mastersetting";
+const STORAGE_KEY = "pkmn-tcg-mastersetting-v2";
 
 interface StoreContextValue {
-  trackedSets: TrackedSet[];
-  addSet: (set: PokemonSet) => void;
-  removeSet: (setId: string) => void;
-  toggleCard: (setId: string, cardId: string) => void;
-  isCardOwned: (setId: string, cardId: string) => boolean;
-  hasSet: (setId: string) => boolean;
+  trackedPokemon: TrackedPokemon[];
+  addPokemon: (name: string, image: string) => void;
+  removePokemon: (name: string) => void;
+  toggleCard: (pokemonName: string, cardId: string) => void;
+  isCardOwned: (pokemonName: string, cardId: string) => boolean;
+  hasPokemon: (name: string) => boolean;
+  updateTotal: (pokemonName: string, total: number) => void;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [trackedSets, setTrackedSets] = useState<TrackedSet[]>([]);
+  const [trackedPokemon, setTrackedPokemon] = useState<TrackedPokemon[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setTrackedSets(JSON.parse(raw));
+      if (raw) setTrackedPokemon(JSON.parse(raw));
     } catch {}
     setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (hydrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(trackedSets));
-  }, [trackedSets, hydrated]);
+    if (hydrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(trackedPokemon));
+  }, [trackedPokemon, hydrated]);
 
-  function addSet(set: PokemonSet) {
-    setTrackedSets((prev) => {
-      if (prev.some((t) => t.set.id === set.id)) return prev;
-      return [...prev, { set, ownedCards: [] }];
+  function addPokemon(name: string, image: string) {
+    setTrackedPokemon((prev) => {
+      if (prev.some((p) => p.name === name)) return prev;
+      return [...prev, { name, image, totalCards: 0, ownedCards: [] }];
     });
   }
 
-  function removeSet(setId: string) {
-    setTrackedSets((prev) => prev.filter((t) => t.set.id !== setId));
+  function removePokemon(name: string) {
+    setTrackedPokemon((prev) => prev.filter((p) => p.name !== name));
   }
 
-  function toggleCard(setId: string, cardId: string) {
-    setTrackedSets((prev) =>
-      prev.map((t) => {
-        if (t.set.id !== setId) return t;
-        const owned = t.ownedCards.includes(cardId)
-          ? t.ownedCards.filter((id) => id !== cardId)
-          : [...t.ownedCards, cardId];
-        return { ...t, ownedCards: owned };
+  function toggleCard(pokemonName: string, cardId: string) {
+    setTrackedPokemon((prev) =>
+      prev.map((p) => {
+        if (p.name !== pokemonName) return p;
+        const owned = p.ownedCards.includes(cardId)
+          ? p.ownedCards.filter((id) => id !== cardId)
+          : [...p.ownedCards, cardId];
+        return { ...p, ownedCards: owned };
       })
     );
   }
 
-  function isCardOwned(setId: string, cardId: string) {
-    return trackedSets.find((t) => t.set.id === setId)?.ownedCards.includes(cardId) ?? false;
+  function isCardOwned(pokemonName: string, cardId: string) {
+    return trackedPokemon.find((p) => p.name === pokemonName)?.ownedCards.includes(cardId) ?? false;
   }
 
-  function hasSet(setId: string) {
-    return trackedSets.some((t) => t.set.id === setId);
+  function hasPokemon(name: string) {
+    return trackedPokemon.some((p) => p.name === name);
+  }
+
+  function updateTotal(pokemonName: string, total: number) {
+    setTrackedPokemon((prev) =>
+      prev.map((p) => (p.name === pokemonName && p.totalCards !== total ? { ...p, totalCards: total } : p))
+    );
   }
 
   return (
-    <StoreContext.Provider value={{ trackedSets, addSet, removeSet, toggleCard, isCardOwned, hasSet }}>
+    <StoreContext.Provider value={{ trackedPokemon, addPokemon, removePokemon, toggleCard, isCardOwned, hasPokemon, updateTotal }}>
       {children}
     </StoreContext.Provider>
   );

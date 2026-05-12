@@ -5,7 +5,7 @@ interface Props {
 
 export default function ProgressBar({ owned, total }: Props) {
   const pct = total > 0 ? Math.round((owned / total) * 100) : 0;
-  const complete = owned >= total;
+  const complete = owned >= total && total > 0;
 
   return (
     <div className="flex items-center gap-3">

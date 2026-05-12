@@ -23,7 +23,9 @@ export interface PokemonCard {
   set: PokemonSet;
 }
 
-export interface TrackedSet {
-  set: PokemonSet;
-  ownedCards: string[]; // card IDs
+export interface TrackedPokemon {
+  name: string;
+  image: string;
+  totalCards: number;
+  ownedCards: string[];
 }
