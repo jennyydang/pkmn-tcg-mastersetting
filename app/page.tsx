@@ -11,7 +11,7 @@ export default function Home() {
     <div>
       <div className="mb-10">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">Master Set Tracker</h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">Search for a Pokémon TCG set to start tracking your collection progress.</p>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">Search a Pokémon by name to find all its cards, then track the sets you want to complete.</p>
         <SetSearch />
       </div>
 
@@ -19,7 +19,7 @@ export default function Home() {
         <div className="flex flex-col items-center justify-center py-24 text-center text-gray-400 dark:text-gray-600">
           <span className="text-6xl mb-4">🃏</span>
           <p className="text-lg font-medium mb-1">No sets tracked yet</p>
-          <p className="text-sm">Search above to add a Pokémon TCG set and start tracking.</p>
+          <p className="text-sm">Search a Pokémon above, then add sets to start tracking.</p>
         </div>
       ) : (
         <div>
