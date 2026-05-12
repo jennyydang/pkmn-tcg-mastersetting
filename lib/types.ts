@@ -20,12 +20,7 @@ export interface PokemonCard {
     small: string;
     large: string;
   };
-  set: {
-    id: string;
-    name: string;
-    total: number;
-    printedTotal: number;
-  };
+  set: PokemonSet;
 }
 
 export interface TrackedSet {
