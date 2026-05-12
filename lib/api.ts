@@ -1,4 +1,4 @@
-import { PokemonCard } from "./types";
+import { PokemonCard, PokemonSet } from "./types";
 
 const BASE_URL = "https://api.pokemontcg.io/v2";
 
@@ -11,26 +11,60 @@ async function apiFetch<T>(path: string): Promise<T> {
   return res.json();
 }
 
-export interface PokemonEntry {
-  name: string;
+export interface SearchResult {
+  type: "pokemon" | "set";
+  id: string;
+  label: string;
   image: string;
+  subtitle: string;
+  setData?: PokemonSet;
 }
 
-export async function searchPokemon(query: string): Promise<PokemonEntry | null> {
+export async function searchAll(query: string): Promise<SearchResult[]> {
   const trimmed = query.trim();
-  if (!trimmed) return null;
-  const data = await apiFetch<{ data: PokemonCard[] }>(
-    `/cards?q=name:"${encodeURIComponent(trimmed)}"&pageSize=1&orderBy=-set.releaseDate`
-  );
-  if (data.data.length === 0) return null;
-  return { name: trimmed, image: data.data[0].images.small };
+  if (!trimmed) return [];
+
+  const [setsRes, pokemonRes] = await Promise.allSettled([
+    apiFetch<{ data: PokemonSet[] }>(
+      `/sets?q=name:${encodeURIComponent(trimmed)}&pageSize=8&orderBy=-releaseDate`
+    ),
+    apiFetch<{ data: PokemonCard[] }>(
+      `/cards?q=name:"${encodeURIComponent(trimmed)}"&pageSize=1&orderBy=-set.releaseDate`
+    ),
+  ]);
+
+  const results: SearchResult[] = [];
+
+  if (setsRes.status === "fulfilled") {
+    for (const set of setsRes.value.data) {
+      results.push({
+        type: "set",
+        id: set.id,
+        label: set.name,
+        image: set.images?.logo || set.images?.symbol || "",
+        subtitle: `${set.series} · ${set.printedTotal ?? set.total} cards`,
+        setData: set,
+      });
+    }
+  }
+
+  if (pokemonRes.status === "fulfilled" && pokemonRes.value.data.length > 0) {
+    results.push({
+      type: "pokemon",
+      id: trimmed,
+      label: trimmed,
+      image: pokemonRes.value.data[0].images.small,
+      subtitle: "All cards across every set",
+    });
+  }
+
+  return results;
 }
 
 export async function getCardsForPokemon(name: string): Promise<PokemonCard[]> {
   const pageSize = 250;
   let page = 1;
   const all: PokemonCard[] = [];
-
   while (true) {
     const data = await apiFetch<{ data: PokemonCard[]; totalCount: number }>(
       `/cards?q=name:${encodeURIComponent(name)}&pageSize=${pageSize}&page=${page}&orderBy=set.releaseDate,number`
@@ -39,6 +73,25 @@ export async function getCardsForPokemon(name: string): Promise<PokemonCard[]> {
     if (all.length >= data.totalCount) break;
     page++;
   }
+  return all;
+}
 
+export async function getSet(id: string): Promise<PokemonSet> {
+  const data = await apiFetch<{ data: PokemonSet }>(`/sets/${id}`);
+  return data.data;
+}
+
+export async function getCardsForSet(setId: string): Promise<PokemonCard[]> {
+  const pageSize = 250;
+  let page = 1;
+  const all: PokemonCard[] = [];
+  while (true) {
+    const data = await apiFetch<{ data: PokemonCard[]; totalCount: number }>(
+      `/cards?q=set.id:${setId}&pageSize=${pageSize}&page=${page}&orderBy=number`
+    );
+    all.push(...data.data);
+    if (all.length >= data.totalCount) break;
+    page++;
+  }
   return all;
 }

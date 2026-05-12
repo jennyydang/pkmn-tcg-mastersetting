@@ -1,33 +1,29 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { searchPokemon, PokemonEntry } from "@/lib/api";
+import { searchAll, SearchResult } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { SearchIcon, XIcon } from "./Icons";
 import Image from "next/image";
 
-export default function PokemonSearch() {
+export default function MasterSetSearch() {
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState<PokemonEntry | null | "none">(null);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState<PokemonEntry | null>(null);
-  const { addPokemon, hasPokemon } = useStore();
+  const [pending, setPending] = useState<SearchResult | null>(null);
+  const { addItem, hasItem } = useStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function search(q: string) {
-    if (!q.trim()) {
-      setResult(null);
-      setOpen(false);
-      return;
-    }
+    if (!q.trim()) { setResults([]); setOpen(false); return; }
     setLoading(true);
     try {
-      const entry = await searchPokemon(q);
-      setResult(entry ?? "none");
+      const data = await searchAll(q);
+      setResults(data);
       setOpen(true);
     } catch {
-      setResult("none");
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -40,18 +36,25 @@ export default function PokemonSearch() {
     debounceRef.current = setTimeout(() => search(q), 400);
   }
 
-  function handleSelect(entry: PokemonEntry) {
-    setOpen(false);
-    setPending(entry);
-  }
-
   function handleConfirm() {
     if (!pending) return;
-    addPokemon(pending.name, pending.image);
+    addItem({
+      type: pending.type,
+      id: pending.id,
+      label: pending.label,
+      image: pending.image,
+      totalCards: 0,
+      ownedCards: [],
+      subtitle: pending.subtitle,
+    });
     setPending(null);
     setQuery("");
-    setResult(null);
+    setResults([]);
   }
+
+  const sets    = results.filter((r) => r.type === "set");
+  const pokemon = results.filter((r) => r.type === "pokemon");
+  const hasResults = results.length > 0;
 
   return (
     <>
@@ -62,50 +65,42 @@ export default function PokemonSearch() {
             type="text"
             value={query}
             onChange={handleChange}
-            placeholder="Search a Pokémon (e.g. Pidgey)..."
+            placeholder="Search a Pokémon or set (e.g. Pidgey, 151, Base…)"
             className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
-            onFocus={() => result && result !== "none" && setOpen(true)}
+            onFocus={() => hasResults && setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 150)}
           />
-          {loading && (
-            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />
-          )}
+          {loading && <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />}
         </div>
 
-        {open && result && result !== "none" && (
-          <ul className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg overflow-hidden">
-            <li>
-              <button
-                onMouseDown={() => handleSelect(result)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
-              >
-                <Image
-                  src={result.image}
-                  alt={result.name}
-                  width={36}
-                  height={50}
-                  className="object-contain shrink-0 rounded"
-                  unoptimized
-                />
-                <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{result.name}</span>
-                {hasPokemon(result.name) ? (
-                  <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Already tracking</span>
-                ) : (
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium shrink-0">+ Add →</span>
-                )}
-              </button>
-            </li>
+        {open && hasResults && (
+          <ul className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-80 overflow-y-auto">
+            {sets.length > 0 && (
+              <>
+                <li className="px-4 pt-2.5 pb-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Sets</span>
+                </li>
+                {sets.map((r) => <ResultRow key={r.id} result={r} onSelect={() => { if (!hasItem(r.id)) setPending(r); setOpen(false); }} alreadyTracking={hasItem(r.id)} />)}
+              </>
+            )}
+            {pokemon.length > 0 && (
+              <>
+                <li className={`px-4 pb-1 ${sets.length > 0 ? "pt-2.5 border-t border-gray-100 dark:border-gray-700 mt-1" : "pt-2.5"}`}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Pokémon</span>
+                </li>
+                {pokemon.map((r) => <ResultRow key={r.id} result={r} onSelect={() => { if (!hasItem(r.id)) setPending(r); setOpen(false); }} alreadyTracking={hasItem(r.id)} />)}
+              </>
+            )}
           </ul>
         )}
 
-        {open && result === "none" && query.trim() && (
+        {open && !loading && !hasResults && query.trim() && (
           <div className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-            No Pokémon found for &ldquo;{query}&rdquo;
+            No results for &ldquo;{query}&rdquo;
           </div>
         )}
       </div>
 
-      {/* Confirmation modal */}
       {pending && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
@@ -119,20 +114,24 @@ export default function PokemonSearch() {
               >
                 <XIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </button>
-              <Image
-                src={pending.image}
-                alt={pending.name}
-                width={100}
-                height={140}
-                className="object-contain drop-shadow-lg"
-                unoptimized
-              />
+              {pending.image && (
+                <Image
+                  src={pending.image}
+                  alt={pending.label}
+                  width={pending.type === "set" ? 180 : 100}
+                  height={pending.type === "set" ? 70 : 140}
+                  className="object-contain drop-shadow-lg"
+                  unoptimized
+                />
+              )}
               <div className="text-center">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-                  Add {pending.name} Master Set?
+                  Add {pending.label}{pending.type === "pokemon" ? " Master Set" : ""}?
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Track every {pending.name} card across all sets.
+                  {pending.type === "pokemon"
+                    ? `Track every ${pending.label} card across all sets.`
+                    : `Track every card in the ${pending.label} set.`}
                 </p>
               </div>
             </div>
@@ -154,5 +153,39 @@ export default function PokemonSearch() {
         </div>
       )}
     </>
+  );
+}
+
+function ResultRow({ result, onSelect, alreadyTracking }: { result: SearchResult; onSelect: () => void; alreadyTracking: boolean }) {
+  return (
+    <li>
+      <button
+        onMouseDown={onSelect}
+        disabled={alreadyTracking}
+        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 transition-colors text-left"
+      >
+        {result.image ? (
+          <Image
+            src={result.image}
+            alt={result.label}
+            width={result.type === "set" ? 56 : 36}
+            height={result.type === "set" ? 22 : 50}
+            className="object-contain shrink-0"
+            unoptimized
+          />
+        ) : (
+          <div className="w-9 h-9 rounded bg-gray-200 dark:bg-gray-700 shrink-0" />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{result.label}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{result.subtitle}</p>
+        </div>
+        {alreadyTracking ? (
+          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Tracking</span>
+        ) : (
+          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium shrink-0">+ Add →</span>
+        )}
+      </button>
+    </li>
   );
 }

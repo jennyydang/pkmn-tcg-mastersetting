@@ -23,9 +23,12 @@ export interface PokemonCard {
   set: PokemonSet;
 }
 
-export interface TrackedPokemon {
-  name: string;
+export interface TrackedMasterSet {
+  type: "pokemon" | "set";
+  id: string;        // Pokémon name  OR  set.id from the API
+  label: string;     // display name
   image: string;
   totalCards: number;
   ownedCards: string[];
+  subtitle?: string; // e.g. "Scarlet & Violet · 165 cards"
 }

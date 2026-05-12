@@ -5,46 +5,44 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { TrackedPokemon } from "@/lib/types";
+import { TrackedMasterSet } from "@/lib/types";
 import { useStore } from "@/lib/store";
 
 interface Props {
-  tracked: TrackedPokemon;
+  tracked: TrackedMasterSet;
   isEditing: boolean;
   onActivateEdit: () => void;
 }
 
-export default function PokemonMasterSetCard({ tracked, isEditing, onActivateEdit }: Props) {
-  const { removePokemon } = useStore();
-  const { name, image, totalCards, ownedCards } = tracked;
+export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Props) {
+  const { removeItem } = useStore();
+  const { id, label, image, totalCards, ownedCards, type, subtitle } = tracked;
   const owned = ownedCards.length;
   const pct = totalCards > 0 ? Math.round((owned / totalCards) * 100) : 0;
   const complete = totalCards > 0 && owned >= totalCards;
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Long-press to activate edit mode
+  // Long-press (only when not in edit mode) → activates edit mode
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didMove = useRef(false);
 
-  function onPointerDown() {
-    if (isEditing) return;
+  function handleLongPressDown() {
     didMove.current = false;
     longPressTimer.current = setTimeout(() => {
       if (!didMove.current) onActivateEdit();
     }, 500);
   }
-  function onPointerMove() {
+  function handleLongPressMove() {
     didMove.current = true;
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
   }
-  function onPointerUp() {
+  function handleLongPressUp() {
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
   }
 
-  // dnd-kit sortable
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: name,
+    id,
     disabled: !isEditing,
   });
 
@@ -55,20 +53,36 @@ export default function PokemonMasterSetCard({ tracked, isEditing, onActivateEdi
     opacity: isDragging ? 0.4 : 1,
   };
 
+  // When editing: spread dnd-kit listeners for drag.
+  // When not editing: attach long-press handlers to trigger jiggle mode.
+  // These must NOT be mixed — dnd-kit's onPointerDown would be overridden
+  // if both are applied to the same element at the same time.
+  const interactionProps = isEditing
+    ? { ...attributes, ...listeners }
+    : {
+        onPointerDown: handleLongPressDown,
+        onPointerMove: handleLongPressMove,
+        onPointerUp: handleLongPressUp,
+      };
+
+  const href = type === "set" ? `/sets/${id}` : `/pokemon/${encodeURIComponent(id)}`;
+
   const cardContent = (
     <>
       <div className="flex items-center gap-4 mb-4">
         <Image
           src={image}
-          alt={name}
-          width={56}
-          height={78}
+          alt={label}
+          width={type === "set" ? 80 : 56}
+          height={type === "set" ? 32 : 78}
           className="object-contain rounded shrink-0"
           unoptimized
         />
         <div className="min-w-0">
-          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight">{name}</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Master Set</p>
+          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">{label}</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {type === "pokemon" ? "Master Set" : (subtitle ?? "Set")}
+          </p>
         </div>
       </div>
 
@@ -85,9 +99,7 @@ export default function PokemonMasterSetCard({ tracked, isEditing, onActivateEdi
             />
           </div>
           {complete && (
-            <p className="mt-2 text-xs text-green-600 dark:text-green-400 font-semibold text-center">
-              Master Set Complete! 🏆
-            </p>
+            <p className="mt-2 text-xs text-green-600 dark:text-green-400 font-semibold text-center">Master Set Complete! 🏆</p>
           )}
         </>
       ) : (
@@ -103,19 +115,15 @@ export default function PokemonMasterSetCard({ tracked, isEditing, onActivateEdi
       <div
         ref={setNodeRef}
         style={style}
-        {...(isEditing ? { ...attributes, ...listeners } : {})}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
+        {...interactionProps}
         onContextMenu={(e) => e.preventDefault()}
         className={`relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow select-none touch-none ${isEditing ? "jiggle" : ""}`}
       >
-        {/* X delete button — visible only in edit mode */}
         {isEditing && (
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }}
-            aria-label={`Remove ${name}`}
+            aria-label={`Remove ${label}`}
             className="absolute -top-2.5 -right-2.5 z-20 w-6 h-6 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-full flex items-center justify-center shadow-md hover:bg-red-600 dark:hover:bg-red-500 dark:hover:text-white transition-colors"
           >
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -124,17 +132,13 @@ export default function PokemonMasterSetCard({ tracked, isEditing, onActivateEdi
           </button>
         )}
 
-        {/* Card body — link only when not editing */}
         {isEditing ? (
-          <div className="block p-5">{cardContent}</div>
+          <div className="p-5">{cardContent}</div>
         ) : (
-          <Link href={`/pokemon/${encodeURIComponent(name)}`} className="block p-5">
-            {cardContent}
-          </Link>
+          <Link href={href} className="block p-5">{cardContent}</Link>
         )}
       </div>
 
-      {/* Delete confirmation modal */}
       {showDeleteModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
@@ -142,12 +146,8 @@ export default function PokemonMasterSetCard({ tracked, isEditing, onActivateEdi
         >
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="p-6">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
-                Remove {name} Master Set?
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Your progress will be lost. This cannot be undone.
-              </p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Remove {label}?</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Your progress will be lost. This cannot be undone.</p>
             </div>
             <div className="flex gap-3 px-6 pb-6">
               <button
@@ -157,7 +157,7 @@ export default function PokemonMasterSetCard({ tracked, isEditing, onActivateEdi
                 Cancel
               </button>
               <button
-                onClick={() => { removePokemon(name); setShowDeleteModal(false); }}
+                onClick={() => { removeItem(id); setShowDeleteModal(false); }}
                 className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-sm font-semibold text-white transition-colors"
               >
                 Remove

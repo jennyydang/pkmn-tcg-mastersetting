@@ -1,80 +1,80 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { TrackedPokemon } from "./types";
+import { TrackedMasterSet } from "./types";
 
-const STORAGE_KEY = "pkmn-tcg-mastersetting-v2";
+const STORAGE_KEY = "pkmn-tcg-mastersetting-v3";
 
 interface StoreContextValue {
-  trackedPokemon: TrackedPokemon[];
-  addPokemon: (name: string, image: string) => void;
-  removePokemon: (name: string) => void;
-  toggleCard: (pokemonName: string, cardId: string) => void;
-  isCardOwned: (pokemonName: string, cardId: string) => boolean;
-  hasPokemon: (name: string) => boolean;
-  updateTotal: (pokemonName: string, total: number) => void;
-  reorderPokemon: (fromName: string, toName: string) => void;
+  trackedItems: TrackedMasterSet[];
+  addItem: (item: TrackedMasterSet) => void;
+  removeItem: (id: string) => void;
+  toggleCard: (id: string, cardId: string) => void;
+  isCardOwned: (id: string, cardId: string) => boolean;
+  hasItem: (id: string) => boolean;
+  updateTotal: (id: string, total: number) => void;
+  reorderItems: (fromId: string, toId: string) => void;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [trackedPokemon, setTrackedPokemon] = useState<TrackedPokemon[]>([]);
+  const [trackedItems, setTrackedItems] = useState<TrackedMasterSet[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setTrackedPokemon(JSON.parse(raw));
+      if (raw) setTrackedItems(JSON.parse(raw));
     } catch {}
     setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (hydrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(trackedPokemon));
-  }, [trackedPokemon, hydrated]);
+    if (hydrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(trackedItems));
+  }, [trackedItems, hydrated]);
 
-  function addPokemon(name: string, image: string) {
-    setTrackedPokemon((prev) => {
-      if (prev.some((p) => p.name === name)) return prev;
-      return [...prev, { name, image, totalCards: 0, ownedCards: [] }];
+  function addItem(item: TrackedMasterSet) {
+    setTrackedItems((prev) => {
+      if (prev.some((t) => t.id === item.id)) return prev;
+      return [...prev, item];
     });
   }
 
-  function removePokemon(name: string) {
-    setTrackedPokemon((prev) => prev.filter((p) => p.name !== name));
+  function removeItem(id: string) {
+    setTrackedItems((prev) => prev.filter((t) => t.id !== id));
   }
 
-  function toggleCard(pokemonName: string, cardId: string) {
-    setTrackedPokemon((prev) =>
-      prev.map((p) => {
-        if (p.name !== pokemonName) return p;
-        const owned = p.ownedCards.includes(cardId)
-          ? p.ownedCards.filter((id) => id !== cardId)
-          : [...p.ownedCards, cardId];
-        return { ...p, ownedCards: owned };
+  function toggleCard(id: string, cardId: string) {
+    setTrackedItems((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        const owned = t.ownedCards.includes(cardId)
+          ? t.ownedCards.filter((c) => c !== cardId)
+          : [...t.ownedCards, cardId];
+        return { ...t, ownedCards: owned };
       })
     );
   }
 
-  function isCardOwned(pokemonName: string, cardId: string) {
-    return trackedPokemon.find((p) => p.name === pokemonName)?.ownedCards.includes(cardId) ?? false;
+  function isCardOwned(id: string, cardId: string) {
+    return trackedItems.find((t) => t.id === id)?.ownedCards.includes(cardId) ?? false;
   }
 
-  function hasPokemon(name: string) {
-    return trackedPokemon.some((p) => p.name === name);
+  function hasItem(id: string) {
+    return trackedItems.some((t) => t.id === id);
   }
 
-  function updateTotal(pokemonName: string, total: number) {
-    setTrackedPokemon((prev) =>
-      prev.map((p) => (p.name === pokemonName && p.totalCards !== total ? { ...p, totalCards: total } : p))
+  function updateTotal(id: string, total: number) {
+    setTrackedItems((prev) =>
+      prev.map((t) => (t.id === id && t.totalCards !== total ? { ...t, totalCards: total } : t))
     );
   }
 
-  function reorderPokemon(fromName: string, toName: string) {
-    setTrackedPokemon((prev) => {
-      const from = prev.findIndex((p) => p.name === fromName);
-      const to   = prev.findIndex((p) => p.name === toName);
+  function reorderItems(fromId: string, toId: string) {
+    setTrackedItems((prev) => {
+      const from = prev.findIndex((t) => t.id === fromId);
+      const to   = prev.findIndex((t) => t.id === toId);
       if (from === -1 || to === -1 || from === to) return prev;
       const next = [...prev];
       const [item] = next.splice(from, 1);
@@ -84,7 +84,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <StoreContext.Provider value={{ trackedPokemon, addPokemon, removePokemon, toggleCard, isCardOwned, hasPokemon, updateTotal, reorderPokemon }}>
+    <StoreContext.Provider value={{ trackedItems, addItem, removeItem, toggleCard, isCardOwned, hasItem, updateTotal, reorderItems }}>
       {children}
     </StoreContext.Provider>
   );
