@@ -1,9 +1,11 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getSet, getCardsForSet } from "@/lib/api";
 import { PokemonCard, PokemonSet } from "@/lib/types";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import CardGrid from "@/app/components/CardGrid";
 import ProgressBar from "@/app/components/ProgressBar";
 import { ChevronRightIcon } from "@/app/components/Icons";
@@ -16,12 +18,18 @@ interface Props {
 
 export default function SetMasterSetPage({ params }: Props) {
   const { id } = use(params);
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [set, setSet] = useState<PokemonSet | null>(null);
   const [cards, setCards] = useState<PokemonCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "owned" | "missing">("all");
   const { isCardOwned, toggleCard, hasItem, addItem, updateTotal, trackedItems } = useStore();
+
+  useEffect(() => {
+    if (!authLoading && !user) router.replace("/");
+  }, [user, authLoading, router]);
 
   const tracked = trackedItems.find((t) => t.id === id && t.type === "set");
   const ownedCount = tracked?.ownedCards.length ?? 0;
@@ -60,6 +68,12 @@ export default function SetMasterSetPage({ params }: Props) {
     if (filter === "missing") return !isCardOwned(id, card.id);
     return true;
   });
+
+  if (authLoading || !user) return (
+    <div className="flex items-center justify-center py-32">
+      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-32 gap-4">

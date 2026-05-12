@@ -13,9 +13,12 @@ import { useEffect, useRef, useState } from "react";
 import SetSearch from "./components/SetSearch";
 import MasterSetCard from "./components/PokemonMasterSetCard";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import AuthModal from "./components/AuthModal";
 
 export default function Home() {
   const { trackedItems, reorderItems } = useStore();
+  const { user, loading: authLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -43,8 +46,15 @@ export default function Home() {
     }
   }
 
+  if (authLoading) return (
+    <div className="flex items-center justify-center py-32">
+      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
   return (
     <div>
+      {!user && <AuthModal />}
       <div className="mb-10">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">Master Set Tracker</h1>
         <p className="text-gray-500 dark:text-gray-400 mb-6">
