@@ -103,9 +103,9 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
           )}
         </>
       ) : (
-        <p className="text-xs text-gray-400 dark:text-gray-500">
-          {owned > 0 ? `${owned} cards owned` : "Click to view cards"}
-        </p>
+        owned > 0 ? (
+          <p className="text-xs text-gray-400 dark:text-gray-500">{owned} cards owned</p>
+        ) : null
       )}
     </>
   );
