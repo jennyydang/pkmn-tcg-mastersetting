@@ -13,6 +13,7 @@ interface StoreContextValue {
   isCardOwned: (pokemonName: string, cardId: string) => boolean;
   hasPokemon: (name: string) => boolean;
   updateTotal: (pokemonName: string, total: number) => void;
+  reorderPokemon: (fromName: string, toName: string) => void;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -70,8 +71,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  function reorderPokemon(fromName: string, toName: string) {
+    setTrackedPokemon((prev) => {
+      const from = prev.findIndex((p) => p.name === fromName);
+      const to   = prev.findIndex((p) => p.name === toName);
+      if (from === -1 || to === -1 || from === to) return prev;
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }
+
   return (
-    <StoreContext.Provider value={{ trackedPokemon, addPokemon, removePokemon, toggleCard, isCardOwned, hasPokemon, updateTotal }}>
+    <StoreContext.Provider value={{ trackedPokemon, addPokemon, removePokemon, toggleCard, isCardOwned, hasPokemon, updateTotal, reorderPokemon }}>
       {children}
     </StoreContext.Provider>
   );

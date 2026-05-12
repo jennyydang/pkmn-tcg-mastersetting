@@ -1,11 +1,36 @@
 "use client";
 
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { useState } from "react";
 import SetSearch from "./components/SetSearch";
 import PokemonMasterSetCard from "./components/PokemonMasterSetCard";
 import { useStore } from "@/lib/store";
 
 export default function Home() {
-  const { trackedPokemon } = useStore();
+  const { trackedPokemon, reorderPokemon } = useStore();
+  const [isEditing, setIsEditing] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      reorderPokemon(active.id as string, over.id as string);
+    }
+  }
 
   return (
     <div>
@@ -25,14 +50,36 @@ export default function Home() {
         </div>
       ) : (
         <div>
-          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
-            Tracking {trackedPokemon.length} master set{trackedPokemon.length !== 1 ? "s" : ""}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {trackedPokemon.map((tracked) => (
-              <PokemonMasterSetCard key={tracked.name} tracked={tracked} />
-            ))}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+              Tracking {trackedPokemon.length} master set{trackedPokemon.length !== 1 ? "s" : ""}
+            </h2>
+            <button
+              onClick={() => setIsEditing((v) => !v)}
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+                isEditing
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600"
+              }`}
+            >
+              {isEditing ? "Done" : "Rearrange"}
+            </button>
           </div>
+
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={trackedPokemon.map((p) => p.name)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {trackedPokemon.map((tracked) => (
+                  <PokemonMasterSetCard
+                    key={tracked.name}
+                    tracked={tracked}
+                    isEditing={isEditing}
+                    onActivateEdit={() => setIsEditing(true)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       )}
     </div>

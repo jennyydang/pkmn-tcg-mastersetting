@@ -21,3 +21,23 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+@keyframes jiggle {
+  0%, 100% { transform: rotate(-2deg) scale(1.01); }
+  50%       { transform: rotate(2deg)  scale(1.01); }
+}
+
+.jiggle {
+  animation: jiggle 0.18s ease-in-out infinite;
+  cursor: grab;
+}
+
+/* Alternate phase so adjacent cards don't move in sync */
+.jiggle:nth-child(even) {
+  animation-direction: reverse;
+  animation-delay: 0.05s;
+}
+
+.jiggle:active {
+  cursor: grabbing;
+}
