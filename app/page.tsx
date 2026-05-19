@@ -146,6 +146,7 @@ export default function Home() {
               Tracking {trackedItems.length} master set{trackedItems.length !== 1 ? "s" : ""}
             </h2>
             <button
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={() => setIsEditing((v) => !v)}
               className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
                 isEditing
