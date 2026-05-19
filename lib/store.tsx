@@ -1,21 +1,23 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { TrackedMasterSet } from "./types";
+import { CustomCardDef, TrackedMasterSet } from "./types";
 import { supabase } from "./supabase";
 import { useAuth } from "./auth";
 
 const STORAGE_KEY = "pkmn-tcg-mastersetting-v3";
 
 interface StoreContextValue {
-  trackedItems: TrackedMasterSet[];
-  addItem:      (item: TrackedMasterSet) => void;
-  removeItem:   (id: string) => void;
-  toggleCard:   (id: string, cardId: string) => void;
-  isCardOwned:  (id: string, cardId: string) => boolean;
-  hasItem:      (id: string) => boolean;
-  updateTotal:  (id: string, total: number) => void;
-  reorderItems: (fromId: string, toId: string) => void;
+  trackedItems:    TrackedMasterSet[];
+  addItem:         (item: TrackedMasterSet) => void;
+  removeItem:      (id: string) => void;
+  toggleCard:      (id: string, cardId: string) => void;
+  isCardOwned:     (id: string, cardId: string) => boolean;
+  hasItem:         (id: string) => boolean;
+  updateTotal:     (id: string, total: number) => void;
+  reorderItems:    (fromId: string, toId: string) => void;
+  addCustomCard:   (itemId: string, card: CustomCardDef) => void;
+  removeCustomCard:(itemId: string, cardId: string) => void;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -46,7 +48,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
 
     async function loadFromSupabase() {
-      const [{ data: sets, error: setsErr }, { data: cards, error: cardsErr }] =
+      const [{ data: sets, error: setsErr }, { data: cards, error: cardsErr }, { data: customCards, error: customErr }] =
         await Promise.all([
           supabase
             .from("tracked_master_sets")
@@ -57,10 +59,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             .from("owned_cards")
             .select("item_id, card_id")
             .eq("user_id", user!.id),
+          supabase
+            .from("custom_set_cards")
+            .select("item_id, card_id, card_name, card_image_small, card_set_name")
+            .eq("user_id", user!.id),
         ]);
 
-      if (setsErr || cardsErr) {
-        console.error("Supabase load error", setsErr ?? cardsErr);
+      if (setsErr || cardsErr || customErr) {
+        console.error("Supabase load error", setsErr ?? cardsErr ?? customErr);
         return;
       }
 
@@ -71,14 +77,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         cardsByItem.set(row.item_id, list);
       }
 
+      const customByItem = new Map<string, CustomCardDef[]>();
+      for (const row of customCards ?? []) {
+        const list = customByItem.get(row.item_id) ?? [];
+        list.push({ id: row.card_id, name: row.card_name, imageSmall: row.card_image_small, setName: row.card_set_name });
+        customByItem.set(row.item_id, list);
+      }
+
       const loaded: TrackedMasterSet[] = (sets ?? []).map((row) => ({
-        type:       row.type as "pokemon" | "set",
-        id:         row.item_id,
-        label:      row.label,
-        image:      row.image,
-        totalCards: row.total_cards,
-        subtitle:   row.subtitle ?? undefined,
-        ownedCards: cardsByItem.get(row.item_id) ?? [],
+        type:        row.type as "pokemon" | "set" | "artist" | "custom",
+        id:          row.item_id,
+        label:       row.label,
+        image:       row.image,
+        totalCards:  row.total_cards,
+        subtitle:    row.subtitle ?? undefined,
+        ownedCards:  cardsByItem.get(row.item_id) ?? [],
+        customCards: customByItem.get(row.item_id),
       }));
 
       setTrackedItems(loaded);
@@ -131,13 +145,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const next = prev.filter((t) => t.id !== id);
       if (canWrite(user?.id)) {
         Promise.all([
-          supabase.from("owned_cards")
-            .delete().eq("user_id", user!.id).eq("item_id", id),
-          supabase.from("tracked_master_sets")
-            .delete().eq("user_id", user!.id).eq("item_id", id),
-        ]).then(([{ error: e1 }, { error: e2 }]) => {
+          supabase.from("owned_cards").delete().eq("user_id", user!.id).eq("item_id", id),
+          supabase.from("custom_set_cards").delete().eq("user_id", user!.id).eq("item_id", id),
+          supabase.from("tracked_master_sets").delete().eq("user_id", user!.id).eq("item_id", id),
+        ]).then(([{ error: e1 }, { error: e2 }, { error: e3 }]) => {
           if (e1) console.error("removeItem owned_cards", e1);
-          if (e2) console.error("removeItem tracked_master_sets", e2);
+          if (e2) console.error("removeItem custom_set_cards", e2);
+          if (e3) console.error("removeItem tracked_master_sets", e3);
         });
       }
       return next;
@@ -233,10 +247,53 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
+  function addCustomCard(itemId: string, card: CustomCardDef) {
+    setTrackedItems((prev) =>
+      prev.map((t) => {
+        if (t.id !== itemId || t.type !== "custom") return t;
+        if ((t.customCards ?? []).some((c) => c.id === card.id)) return t;
+        const customCards = [...(t.customCards ?? []), card];
+        const totalCards  = customCards.length;
+        const image       = t.image || card.imageSmall;
+        if (canWrite(user?.id)) {
+          supabase.from("custom_set_cards")
+            .upsert({ user_id: user!.id, item_id: itemId, card_id: card.id, card_name: card.name, card_image_small: card.imageSmall, card_set_name: card.setName }, { onConflict: "user_id,item_id,card_id", ignoreDuplicates: true })
+            .then(({ error }) => { if (error) console.error("addCustomCard", error); });
+          supabase.from("tracked_master_sets")
+            .update({ total_cards: totalCards, image })
+            .eq("user_id", user!.id).eq("item_id", itemId)
+            .then(({ error }) => { if (error) console.error("addCustomCard updateSet", error); });
+        }
+        return { ...t, customCards, totalCards, image };
+      })
+    );
+  }
+
+  function removeCustomCard(itemId: string, cardId: string) {
+    setTrackedItems((prev) =>
+      prev.map((t) => {
+        if (t.id !== itemId || t.type !== "custom") return t;
+        const customCards = (t.customCards ?? []).filter((c) => c.id !== cardId);
+        const totalCards  = customCards.length;
+        if (canWrite(user?.id)) {
+          supabase.from("custom_set_cards")
+            .delete().eq("user_id", user!.id).eq("item_id", itemId).eq("card_id", cardId)
+            .then(({ error }) => { if (error) console.error("removeCustomCard", error); });
+          supabase.from("tracked_master_sets")
+            .update({ total_cards: totalCards })
+            .eq("user_id", user!.id).eq("item_id", itemId)
+            .then(({ error }) => { if (error) console.error("removeCustomCard updateSet", error); });
+        }
+        return { ...t, customCards, totalCards };
+      })
+    );
+  }
+
   return (
     <StoreContext.Provider value={{
       trackedItems, addItem, removeItem, toggleCard,
       isCardOwned, hasItem, updateTotal, reorderItems,
+      addCustomCard, removeCustomCard,
     }}>
       {children}
     </StoreContext.Provider>

@@ -104,6 +104,15 @@ export async function getCardsForArtist(artist: string): Promise<PokemonCard[]> 
   return all;
 }
 
+export async function searchCards(query: string): Promise<PokemonCard[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const data = await apiFetch<{ data: PokemonCard[] }>(
+    `/cards?q=name:${encodeURIComponent(trimmed)}&pageSize=12&orderBy=-set.releaseDate`
+  );
+  return data.data;
+}
+
 export async function getSet(id: string): Promise<PokemonSet> {
   const data = await apiFetch<{ data: PokemonSet }>(`/sets/${id}`);
   return data.data;

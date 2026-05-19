@@ -23,12 +23,20 @@ export interface PokemonCard {
   set: PokemonSet;
 }
 
+export interface CustomCardDef {
+  id: string;
+  name: string;
+  imageSmall: string;
+  setName: string;
+}
+
 export interface TrackedMasterSet {
-  type: "pokemon" | "set" | "artist";
-  id: string;        // Pokémon name  OR  set.id from the API
+  type: "pokemon" | "set" | "artist" | "custom";
+  id: string;        // Pokémon name  OR  set.id  OR  artist name  OR  uuid
   label: string;     // display name
   image: string;
   totalCards: number;
   ownedCards: string[];
-  subtitle?: string; // e.g. "Scarlet & Violet · 165 cards"
+  subtitle?: string;
+  customCards?: CustomCardDef[]; // only populated for type === "custom"
 }

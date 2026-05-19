@@ -69,23 +69,29 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
     ? `/sets/${id}`
     : type === "artist"
     ? `/artist/${encodeURIComponent(id)}`
+    : type === "custom"
+    ? `/custom/${id}`
     : `/pokemon/${encodeURIComponent(id)}`;
 
   const cardContent = (
     <>
       <div className="flex items-center gap-4 mb-4">
-        <Image
-          src={image}
-          alt={label}
-          width={type === "set" ? 80 : 56}
-          height={type === "set" ? 32 : 78}
-          className="object-contain rounded shrink-0"
-          unoptimized
-        />
+        {image ? (
+          <Image
+            src={image}
+            alt={label}
+            width={type === "set" ? 80 : 56}
+            height={type === "set" ? 32 : 78}
+            className="object-contain rounded shrink-0"
+            unoptimized
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 text-2xl">🃏</div>
+        )}
         <div className="min-w-0">
           <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">{label}</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {type === "pokemon" ? "Master Set" : type === "artist" ? "Artist Collection" : (subtitle ?? "Set")}
+            {type === "pokemon" ? "Master Set" : type === "artist" ? "Artist Collection" : type === "custom" ? "Custom Set" : (subtitle ?? "Set")}
           </p>
         </div>
       </div>
