@@ -59,15 +59,22 @@ export default function Home() {
   return (
     <div>
       {!user && <AuthModal />}
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">Master Set Tracker</h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">
-          Search a Pokémon or a TCG set to start tracking every card.
+      <div className="mb-10 flex flex-col md:items-center">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1 md:text-center">Master Set Tracker</h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-6 md:text-center">
+          Search a Pokémon, set, or artist to start tracking every card.
         </p>
-        <SetSearch />
+        <div className="w-full md:max-w-2xl">
+          <SetSearch />
+        </div>
+        <div className="flex items-center gap-3 mt-5 w-full md:max-w-2xl">
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <span className="text-sm text-gray-400 dark:text-gray-500">or</span>
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+        </div>
         <button
           onClick={() => { setCustomName(""); setShowCreateModal(true); }}
-          className="mt-3 flex items-center gap-1.5 px-4 py-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          className="mt-5 flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

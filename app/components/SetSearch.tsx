@@ -52,6 +52,11 @@ export default function MasterSetSearch() {
     setResults([]);
   }
 
+  function handleSearchButton() {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    search(query);
+  }
+
   const sets    = results.filter((r) => r.type === "set");
   const pokemon = results.filter((r) => r.type === "pokemon");
   const artists = results.filter((r) => r.type === "artist");
@@ -59,14 +64,16 @@ export default function MasterSetSearch() {
 
   return (
     <>
-      <div className="relative w-full max-w-lg">
+      <div className="flex items-center gap-2 w-full">
+      <div className="relative flex-1">
         <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 transition-all">
           <SearchIcon className="w-5 h-5 text-gray-400 shrink-0" />
           <input
             type="text"
             value={query}
             onChange={handleChange}
-            placeholder="Search a Pokémon, set, or artist (e.g. Pidgey, 151, Ken Sugimori…)"
+            onKeyDown={(e) => { if (e.key === "Enter") handleSearchButton(); }}
+            placeholder="Search a Pokémon, set, or artist…"
             className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
             onFocus={() => hasResults && setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -108,6 +115,13 @@ export default function MasterSetSearch() {
             No results for &ldquo;{query}&rdquo;
           </div>
         )}
+      </div>
+      <button
+        onClick={handleSearchButton}
+        className="shrink-0 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors"
+      >
+        Search
+      </button>
       </div>
 
       {pending && (
