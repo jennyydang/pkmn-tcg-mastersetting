@@ -9,7 +9,7 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import SetSearch from "./components/SetSearch";
 import MasterSetCard from "./components/PokemonMasterSetCard";
@@ -24,20 +24,6 @@ export default function Home() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [customName, setCustomName] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const gridRef = useRef<HTMLDivElement>(null);
-
-  // Exit edit mode when the user clicks/taps outside the card grid
-  useEffect(() => {
-    if (!isEditing) return;
-    function onPointerDown(e: PointerEvent) {
-      if (gridRef.current && !gridRef.current.contains(e.target as Node)) {
-        setIsEditing(false);
-      }
-    }
-    // Delay by one frame so the event that triggered edit mode doesn't immediately cancel it
-    const tid = setTimeout(() => document.addEventListener("pointerdown", onPointerDown), 0);
-    return () => { clearTimeout(tid); document.removeEventListener("pointerdown", onPointerDown); };
-  }, [isEditing]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -146,7 +132,6 @@ export default function Home() {
               Tracking {trackedItems.length} master set{trackedItems.length !== 1 ? "s" : ""}
             </h2>
             <button
-              onPointerDown={(e) => e.stopPropagation()}
               onClick={() => setIsEditing((v) => !v)}
               className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
                 isEditing
@@ -161,7 +146,7 @@ export default function Home() {
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={trackedItems.map((t) => t.id)} strategy={rectSortingStrategy}>
-              <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {trackedItems.map((tracked) => (
                   <MasterSetCard
                     key={tracked.id}

@@ -233,15 +233,15 @@ export default function PortfolioPage() {
                       {row.cards.map((card, i) => (
                         <div
                           key={card.id}
-                          className={`flex items-center gap-3 px-8 py-2 ${
+                          className={`flex items-center gap-3 pl-12 pr-5 py-2 ${
                             i < row.cards.length - 1 ? "border-b border-gray-100 dark:border-gray-800" : ""
                           }`}
                         >
-                          <span className="w-14 text-right text-xs font-mono text-gray-400 dark:text-gray-500 shrink-0">
+                          <span className="text-xs font-mono text-gray-400 dark:text-gray-500 shrink-0">
                             {card.number}{card.setTotal > 0 ? `/${card.setTotal}` : ""}
                           </span>
-                          <p className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">{card.name}</p>
-                          <p className={`w-14 text-right text-sm shrink-0 ${card.price != null ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500"}`}>
+                          <p className="flex-1 min-w-0 text-sm text-gray-700 dark:text-gray-300 truncate">{card.name}</p>
+                          <p className={`text-sm shrink-0 ${card.price != null ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500"}`}>
                             {card.price != null ? `$${card.price.toFixed(2)}` : "—"}
                           </p>
                         </div>
