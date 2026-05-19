@@ -8,6 +8,7 @@ import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import CardGrid from "@/app/components/CardGrid";
 import ProgressBar from "@/app/components/ProgressBar";
+import CollectionEditSheet from "@/app/components/CollectionEditSheet";
 import { ChevronRightIcon } from "@/app/components/Icons";
 import Image from "next/image";
 import Link from "next/link";
@@ -25,7 +26,8 @@ export default function SetMasterSetPage({ params }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "owned" | "missing">("all");
-  const { isCardOwned, toggleCard, hasItem, addItem, updateTotal, trackedItems } = useStore();
+  const [editOpen, setEditOpen] = useState(false);
+  const { isCardOwned, toggleCard, hasItem, addItem, updateTotal, removeItem, updateItem, trackedItems } = useStore();
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/");
@@ -33,6 +35,8 @@ export default function SetMasterSetPage({ params }: Props) {
 
   const tracked = trackedItems.find((t) => t.id === id && t.type === "set");
   const ownedCount = tracked?.ownedCards.length ?? 0;
+  const displayName = tracked?.label ?? set?.name ?? "";
+  const displaySubtitle = tracked?.subtitle ?? (set ? `${set.series} · Released ${set.releaseDate} · ${cards.length} cards` : "");
 
   useEffect(() => {
     async function load() {
@@ -94,7 +98,7 @@ export default function SetMasterSetPage({ params }: Props) {
       <nav className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-6">
         <Link href="/" className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors">Home</Link>
         <ChevronRightIcon className="w-4 h-4" />
-        <span className="text-gray-900 dark:text-gray-100 font-medium truncate">{set?.name}</span>
+        <span className="text-gray-900 dark:text-gray-100 font-medium truncate">{displayName}</span>
       </nav>
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6 shadow-sm">
@@ -104,10 +108,20 @@ export default function SetMasterSetPage({ params }: Props) {
               className="object-contain max-h-16 w-auto" unoptimized />
           )}
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-0.5">{set?.name}</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {set?.series} · Released {set?.releaseDate} · {cards.length} cards
-            </p>
+            <div className="flex items-start justify-between gap-2 mb-0.5">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{displayName}</h1>
+              {tracked && (
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="shrink-0 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{displaySubtitle}</p>
             <ProgressBar owned={ownedCount} total={cards.length} />
             {ownedCount >= cards.length && cards.length > 0 && (
               <div className="mt-3 inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
@@ -131,6 +145,15 @@ export default function SetMasterSetPage({ params }: Props) {
         <CardGrid cards={filteredCards} isOwned={(cid) => isCardOwned(id, cid)} onToggle={(cid) => toggleCard(id, cid)} />
       ) : (
         <div className="py-16 text-center text-gray-400 dark:text-gray-600"><p className="text-lg">No cards to show</p></div>
+      )}
+
+      {editOpen && tracked && (
+        <CollectionEditSheet
+          item={tracked}
+          onSave={(updates) => updateItem(id, updates)}
+          onDelete={() => { removeItem(id); router.replace("/"); }}
+          onClose={() => setEditOpen(false)}
+        />
       )}
     </div>
   );

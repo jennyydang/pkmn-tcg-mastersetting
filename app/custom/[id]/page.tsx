@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { searchCards, getCard } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
+import CollectionEditSheet from "@/app/components/CollectionEditSheet";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import ProgressBar from "@/app/components/ProgressBar";
@@ -20,7 +21,7 @@ export default function CustomSetPage({ params }: Props) {
   const { id } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { trackedItems, isCardOwned, toggleCard, addCustomCard, removeCustomCard } = useStore();
+  const { trackedItems, isCardOwned, toggleCard, addCustomCard, removeCustomCard, removeItem, updateItem } = useStore();
 
   const [filter, setFilter]     = useState<"all" | "owned" | "missing">("all");
   const [isEditing, setIsEditing] = useState(false);
@@ -32,6 +33,7 @@ export default function CustomSetPage({ params }: Props) {
   const [priceCard, setPriceCard]     = useState<PokemonCard | null>(null);
   const [priceOpen, setPriceOpen]     = useState(false);
   const [priceLoading, setPriceLoading] = useState(false);
+  const [editOpen, setEditOpen]       = useState(false);
 
   async function handleInfo(cardId: string) {
     setPriceCard(null);
@@ -124,8 +126,18 @@ export default function CustomSetPage({ params }: Props) {
 
       {/* Header card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-0.5">{tracked.label}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Custom set · {customCards.length} cards</p>
+        <div className="flex items-start justify-between gap-2 mb-0.5">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{tracked.label}</h1>
+          <button
+            onClick={() => setEditOpen(true)}
+            className="shrink-0 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+            </svg>
+          </button>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{tracked.subtitle ?? `Custom set · ${customCards.length} cards`}</p>
         <ProgressBar owned={ownedCount} total={customCards.length} />
         {complete && (
           <div className="mt-3 inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
@@ -258,6 +270,15 @@ export default function CustomSetPage({ params }: Props) {
 
       {priceOpen && (
         <CardPriceModal card={priceCard} loading={priceLoading} onClose={closePriceModal} />
+      )}
+
+      {editOpen && (
+        <CollectionEditSheet
+          item={tracked}
+          onSave={(updates) => updateItem(id, updates)}
+          onDelete={() => { removeItem(id); router.replace("/"); }}
+          onClose={() => setEditOpen(false)}
+        />
       )}
     </div>
   );

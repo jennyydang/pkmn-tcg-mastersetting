@@ -18,6 +18,7 @@ interface StoreContextValue {
   reorderItems:    (fromId: string, toId: string) => void;
   addCustomCard:   (itemId: string, card: CustomCardDef) => void;
   removeCustomCard:(itemId: string, cardId: string) => void;
+  updateItem:      (id: string, updates: { label?: string; subtitle?: string }) => void;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -289,11 +290,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  function updateItem(id: string, updates: { label?: string; subtitle?: string }) {
+    setTrackedItems((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        const next = { ...t, ...updates };
+        if (canWrite(user?.id)) {
+          supabase
+            .from("tracked_master_sets")
+            .update({ label: next.label, subtitle: next.subtitle ?? null })
+            .eq("user_id", user!.id)
+            .eq("item_id", id)
+            .then(({ error }) => { if (error) console.error("updateItem", error); });
+        }
+        return next;
+      })
+    );
+  }
+
   return (
     <StoreContext.Provider value={{
       trackedItems, addItem, removeItem, toggleCard,
       isCardOwned, hasItem, updateTotal, reorderItems,
-      addCustomCard, removeCustomCard,
+      addCustomCard, removeCustomCard, updateItem,
     }}>
       {children}
     </StoreContext.Provider>

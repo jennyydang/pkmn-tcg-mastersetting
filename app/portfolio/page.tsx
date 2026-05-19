@@ -237,10 +237,10 @@ export default function PortfolioPage() {
                             i < row.cards.length - 1 ? "border-b border-gray-100 dark:border-gray-800" : ""
                           }`}
                         >
+                          <p className="flex-1 min-w-0 text-sm text-gray-700 dark:text-gray-300 truncate">{card.name}</p>
                           <span className="text-xs font-mono text-gray-400 dark:text-gray-500 shrink-0">
                             {card.number}{card.setTotal > 0 ? `/${card.setTotal}` : ""}
                           </span>
-                          <p className="flex-1 min-w-0 text-sm text-gray-700 dark:text-gray-300 truncate">{card.name}</p>
                           <p className={`text-sm shrink-0 ${card.price != null ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500"}`}>
                             {card.price != null ? `$${card.price.toFixed(2)}` : "—"}
                           </p>
