@@ -123,6 +123,23 @@ export async function getSet(id: string): Promise<PokemonSet> {
   return data.data;
 }
 
+export async function getCardsByIds(ids: string[]): Promise<PokemonCard[]> {
+  if (ids.length === 0) return [];
+  const CHUNK = 50;
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
+
+  const results = await Promise.all(
+    chunks.map((chunk) => {
+      const q = chunk.map((id) => `id:${id}`).join(" OR ");
+      return apiFetch<{ data: PokemonCard[] }>(
+        `/cards?q=${encodeURIComponent(q)}&pageSize=250`
+      ).then((r) => r.data);
+    })
+  );
+  return results.flat();
+}
+
 export async function getCardsForSet(setId: string): Promise<PokemonCard[]> {
   const pageSize = 250;
   let page = 1;
