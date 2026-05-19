@@ -82,7 +82,7 @@ export default function CardGrid({ cards, isOwned, onToggle }: Props) {
           />
         ))}
       </div>
-      <CardPriceModal card={priceCard} loading={false} onClose={() => setPriceCard(null)} />
+      {priceCard && <CardPriceModal card={priceCard} loading={false} onClose={() => setPriceCard(null)} />}
     </>
   );
 }
