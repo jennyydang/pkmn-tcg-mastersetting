@@ -153,7 +153,7 @@ export default function Home() {
                   : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600"
               }`}
             >
-              {isEditing ? "Done" : "Rearrange"}
+              {isEditing ? "Done" : "Edit Sets"}
             </button>
           </div>
           <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Click on a card to view and track its cards.</p>

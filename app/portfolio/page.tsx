@@ -25,6 +25,7 @@ interface Snapshot {
 interface CardRow {
   id: string;
   name: string;
+  number: string;
   price: number | null;
 }
 
@@ -75,10 +76,10 @@ export default function PortfolioPage() {
 
         const cards = await getCardsByIds([...allIds]);
 
-        const cardInfoMap = new Map<string, { name: string }>();
+        const cardInfoMap = new Map<string, { name: string; number: string }>();
         const priceMap = new Map<string, number>();
         for (const card of cards) {
-          cardInfoMap.set(card.id, { name: card.name });
+          cardInfoMap.set(card.id, { name: card.name, number: card.number });
           const prices = card.tcgplayer?.prices;
           if (!prices) continue;
           const market = Object.values(prices).find((p) => p.market != null)?.market;
@@ -97,7 +98,8 @@ export default function PortfolioPage() {
             const itemCards: CardRow[] = item.ownedCards.map((cardId) => {
               const price = priceMap.get(cardId) ?? null;
               itemValue += price ?? 0;
-              return { id: cardId, name: cardInfoMap.get(cardId)?.name ?? cardId, price };
+              const info = cardInfoMap.get(cardId);
+              return { id: cardId, name: info?.name ?? cardId, number: info?.number ?? "", price };
             });
             itemCards.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
             return { id: item.id, label: item.label, ownedCount: item.ownedCards.length, value: itemValue, cards: itemCards };
@@ -234,7 +236,12 @@ export default function PortfolioPage() {
                             i < row.cards.length - 1 ? "border-b border-gray-100 dark:border-gray-800" : ""
                           }`}
                         >
-                          <p className="text-sm text-gray-700 dark:text-gray-300 truncate mr-4">{card.name}</p>
+                          <div className="flex items-center gap-2 min-w-0 mr-4">
+                            {card.number && (
+                              <span className="text-xs font-mono text-gray-400 dark:text-gray-500 shrink-0">#{card.number}</span>
+                            )}
+                            <p className="text-sm text-gray-700 dark:text-gray-300 truncate">{card.name}</p>
+                          </div>
                           <p className={`text-sm shrink-0 ${card.price != null ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500"}`}>
                             {card.price != null ? `$${card.price.toFixed(2)}` : "—"}
                           </p>
