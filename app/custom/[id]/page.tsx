@@ -2,8 +2,9 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { searchCards } from "@/lib/api";
+import { searchCards, getCard } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
+import CardPriceModal from "@/app/components/CardPriceModal";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import ProgressBar from "@/app/components/ProgressBar";
@@ -28,6 +29,26 @@ export default function CustomSetPage({ params }: Props) {
   const [searching, setSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [priceCard, setPriceCard]     = useState<PokemonCard | null>(null);
+  const [priceOpen, setPriceOpen]     = useState(false);
+  const [priceLoading, setPriceLoading] = useState(false);
+
+  async function handleInfo(cardId: string) {
+    setPriceCard(null);
+    setPriceOpen(true);
+    setPriceLoading(true);
+    try {
+      const full = await getCard(cardId);
+      setPriceCard(full);
+    } finally {
+      setPriceLoading(false);
+    }
+  }
+
+  function closePriceModal() {
+    setPriceOpen(false);
+    setPriceCard(null);
+  }
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/");
@@ -215,6 +236,13 @@ export default function CustomSetPage({ params }: Props) {
                     </div>
                   )}
                 </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleInfo(card.id); }}
+                  title="View price"
+                  className="absolute top-1 left-1 w-5 h-5 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <span className="text-white text-[10px] font-bold leading-none">i</span>
+                </button>
               </div>
             );
           })}
@@ -226,6 +254,10 @@ export default function CustomSetPage({ params }: Props) {
             : <p className="text-lg">No cards to show</p>
           }
         </div>
+      )}
+
+      {priceOpen && (
+        <CardPriceModal card={priceCard} loading={priceLoading} onClose={closePriceModal} />
       )}
     </div>
   );

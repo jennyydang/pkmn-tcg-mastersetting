@@ -113,6 +113,11 @@ export async function searchCards(query: string): Promise<PokemonCard[]> {
   return data.data;
 }
 
+export async function getCard(id: string): Promise<PokemonCard> {
+  const data = await apiFetch<{ data: PokemonCard }>(`/cards/${id}`);
+  return data.data;
+}
+
 export async function getSet(id: string): Promise<PokemonSet> {
   const data = await apiFetch<{ data: PokemonSet }>(`/sets/${id}`);
   return data.data;

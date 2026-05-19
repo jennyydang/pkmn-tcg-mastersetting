@@ -11,6 +11,14 @@ export interface PokemonSet {
   };
 }
 
+export interface TCGPlayerPrice {
+  low?: number;
+  mid?: number;
+  high?: number;
+  market?: number;
+  directLow?: number;
+}
+
 export interface PokemonCard {
   id: string;
   name: string;
@@ -21,6 +29,11 @@ export interface PokemonCard {
     large: string;
   };
   set: PokemonSet;
+  tcgplayer?: {
+    url?: string;
+    updatedAt?: string;
+    prices?: Record<string, TCGPlayerPrice>;
+  };
 }
 
 export interface CustomCardDef {
