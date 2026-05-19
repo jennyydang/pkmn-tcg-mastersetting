@@ -64,18 +64,16 @@ export default function Home() {
         <p className="text-gray-500 dark:text-gray-400 mb-6">
           Search a Pokémon or a TCG set to start tracking every card.
         </p>
-        <div className="flex items-start gap-3">
-          <SetSearch />
-          <button
-            onClick={() => { setCustomName(""); setShowCreateModal(true); }}
-            className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Custom
-          </button>
-        </div>
+        <SetSearch />
+        <button
+          onClick={() => { setCustomName(""); setShowCreateModal(true); }}
+          className="mt-3 flex items-center gap-1.5 px-4 py-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Create Custom Set
+        </button>
       </div>
 
       {showCreateModal && (
