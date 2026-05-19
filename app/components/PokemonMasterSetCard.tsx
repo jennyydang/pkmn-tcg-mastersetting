@@ -127,7 +127,7 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
         style={style}
         {...interactionProps}
         onContextMenu={(e) => e.preventDefault()}
-        className={`relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow select-none touch-none ${isEditing ? "jiggle" : ""}`}
+        className="relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow select-none touch-none"
       >
         {isEditing && (
           <button
