@@ -41,3 +41,13 @@ body {
 .jiggle:active {
   cursor: grabbing;
 }
+
+/* Prevent iOS Safari from zooming on input focus (requires font-size >= 16px) */
+@media screen and (max-width: 767px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea {
+    font-size: 16px;
+  }
+}

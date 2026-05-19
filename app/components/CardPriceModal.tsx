@@ -38,22 +38,21 @@ export default function CardPriceModal({ card, loading, onClose }: Props) {
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-50 bg-black/60"
-        onClick={handleClose}
-      />
+      <div className="fixed inset-0 z-50 bg-black/60" onClick={handleClose} />
 
-      {/* Sheet */}
+      {/* Bottom sheet on mobile → centered modal on desktop */}
       <div
-        className={`fixed bottom-0 inset-x-0 z-50 bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl flex flex-col transition-transform duration-300 ease-out ${
-          visible ? "translate-y-0" : "translate-y-full"
+        className={`fixed z-50 bottom-0 inset-x-0 md:inset-auto md:left-1/2 md:top-1/2 md:w-full md:max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out md:max-h-[85vh] ${
+          visible
+            ? "translate-y-0 md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-100 md:scale-100"
+            : "translate-y-full md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-0 md:scale-95"
         }`}
       >
-        {/* Drag handle */}
-        <div className="mx-auto mt-3 mb-1 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+        {/* Drag handle — mobile only */}
+        <div className="md:hidden mx-auto mt-3 mb-1 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
 
         {/* Scrollable body */}
-        <div className="overflow-y-auto max-h-[75vh] px-5 pb-2">
+        <div className="overflow-y-auto max-h-[75vh] md:max-h-none px-5 pb-2">
           {/* Card header row */}
           <div className="flex items-center gap-4 py-4 border-b border-gray-100 dark:border-gray-800">
             {card ? (

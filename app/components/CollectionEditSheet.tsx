@@ -35,12 +35,16 @@ export default function CollectionEditSheet({ item, onSave, onDelete, onClose }:
     <>
       <div className="fixed inset-0 z-50 bg-black/60" onClick={handleClose} />
 
+      {/* Bottom sheet on mobile → centered modal on desktop */}
       <div
-        className={`fixed bottom-0 inset-x-0 z-50 bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl flex flex-col transition-transform duration-300 ease-out ${
-          visible ? "translate-y-0" : "translate-y-full"
+        className={`fixed z-50 bottom-0 inset-x-0 md:inset-auto md:left-1/2 md:top-1/2 md:w-full md:max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out ${
+          visible
+            ? "translate-y-0 md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-100 md:scale-100"
+            : "translate-y-full md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-0 md:scale-95"
         }`}
       >
-        <div className="mx-auto mt-3 mb-1 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+        {/* Drag handle — mobile only */}
+        <div className="md:hidden mx-auto mt-3 mb-1 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <h2 className="font-bold text-gray-900 dark:text-gray-100">Edit Collection</h2>
