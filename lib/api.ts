@@ -108,13 +108,17 @@ export async function searchCards(query: string): Promise<PokemonCard[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  // Card number pattern: "25", "025", "25/102", "TG01", "TG01/TG30", "SWSH001"
+  // Card number pattern: "25", "057", "25/102", "057/102", "TG01", "TG01/TG30", "SWSH001"
   const isNumberQuery = /^[A-Za-z]{0,5}\d+(?:\/[A-Za-z]{0,5}\d+)?$/.test(trimmed);
 
   let q: string;
   if (isNumberQuery) {
-    // Extract only the part before the "/" (the card's own number, not the set total)
-    const cardNumber = trimmed.split("/")[0];
+    // Take only the part before "/" (card's own number, not the set total)
+    const raw = trimmed.split("/")[0];
+    // Strip leading zeros from purely numeric numbers ("057" → "57") since the
+    // TCG API stores card numbers without leading zeros for standard sets.
+    // Non-numeric prefixes like "TG01" or "SWSH001" are left unchanged.
+    const cardNumber = /^\d+$/.test(raw) ? String(parseInt(raw, 10)) : raw;
     q = `number:${cardNumber}`;
   } else {
     q = `name:${trimmed}`;
