@@ -161,8 +161,8 @@ export default function CustomSetPage({ params }: Props) {
                 onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
                 onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
                 onKeyDown={(e) => { if (e.key === "Enter") { if (debounceRef.current) clearTimeout(debounceRef.current); handleSearch(query); } }}
-                placeholder="Search cards to add to this set…"
-                aria-label="Search cards to add to this set"
+                placeholder="Search by name or card number (e.g. 025, 25/102)…"
+                aria-label="Search cards by name or card number to add to this set"
                 aria-controls="card-search-results"
                 aria-expanded={searchOpen && searchResults.length > 0}
                 className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"

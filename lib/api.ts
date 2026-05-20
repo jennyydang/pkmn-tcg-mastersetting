@@ -107,8 +107,21 @@ export async function getCardsForArtist(artist: string): Promise<PokemonCard[]> 
 export async function searchCards(query: string): Promise<PokemonCard[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
+
+  // Card number pattern: "25", "025", "25/102", "TG01", "TG01/TG30", "SWSH001"
+  const isNumberQuery = /^[A-Za-z]{0,5}\d+(?:\/[A-Za-z]{0,5}\d+)?$/.test(trimmed);
+
+  let q: string;
+  if (isNumberQuery) {
+    // Extract only the part before the "/" (the card's own number, not the set total)
+    const cardNumber = trimmed.split("/")[0];
+    q = `number:${cardNumber}`;
+  } else {
+    q = `name:${trimmed}`;
+  }
+
   const data = await apiFetch<{ data: PokemonCard[] }>(
-    `/cards?q=name:${encodeURIComponent(trimmed)}&pageSize=12&orderBy=-set.releaseDate`
+    `/cards?q=${encodeURIComponent(q)}&pageSize=20&orderBy=-set.releaseDate`
   );
   return data.data;
 }
