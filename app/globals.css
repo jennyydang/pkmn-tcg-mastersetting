@@ -22,6 +22,12 @@ body {
   color: var(--foreground);
 }
 
+/* WCAG 2.2 — enhanced focus indicator (2.4.11 / 2.4.13) */
+:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
 @keyframes jiggle {
   0%, 100% { transform: rotate(-2deg) scale(1.01); }
   50%       { transform: rotate(2deg)  scale(1.01); }
@@ -40,6 +46,23 @@ body {
 
 .jiggle:active {
   cursor: grabbing;
+}
+
+/* WCAG 2.2 — 2.3.3 Animation from Interactions (AAA) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .jiggle {
+    animation: none;
+    transform: none;
+  }
 }
 
 /* Prevent iOS Safari from zooming on input focus (requires font-size >= 16px) */

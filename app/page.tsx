@@ -133,7 +133,8 @@ export default function Home() {
             </h2>
             <button
               onClick={() => setIsEditing((v) => !v)}
-              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+              aria-pressed={isEditing}
+              className={`px-4 py-2 min-h-[44px] rounded-full text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                 isEditing
                   ? "bg-blue-600 text-white hover:bg-blue-700"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600"

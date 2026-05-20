@@ -19,15 +19,16 @@ function CardItem({ card, owned, onToggle, onInfo }: CardItemProps) {
     <div className="relative">
       <button
         onClick={onToggle}
-        title={`${card.name} #${card.number} — ${owned ? "Owned" : "Not owned"}`}
-        className={`relative w-full rounded-lg overflow-hidden transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 hover:scale-105 ${
+        aria-label={`${card.name} #${card.number} — ${owned ? "Owned, click to unmark" : "Not owned, click to mark as owned"}`}
+        aria-pressed={owned}
+        className={`relative w-full rounded-lg overflow-hidden transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 hover:scale-105 ${
           owned ? "opacity-100 shadow-md" : "opacity-50 hover:opacity-70"
         }`}
       >
         {!imgError ? (
           <Image
             src={card.images.small}
-            alt={`${card.name} #${card.number}`}
+            alt={card.name}
             width={146}
             height={204}
             className="w-full h-auto block"
@@ -35,14 +36,14 @@ function CardItem({ card, owned, onToggle, onInfo }: CardItemProps) {
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="w-full aspect-[146/204] bg-gray-200 dark:bg-gray-700 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 text-xs p-2 rounded-lg">
-            <span className="text-2xl mb-1">🃏</span>
+          <div className="w-full aspect-[146/204] bg-gray-200 dark:bg-gray-700 flex flex-col items-center justify-center text-gray-600 dark:text-gray-400 text-xs p-2 rounded-lg">
+            <span className="text-2xl mb-1" aria-hidden="true">🃏</span>
             <span className="font-medium text-center leading-tight">{card.name}</span>
             <span>#{card.number}</span>
           </div>
         )}
         {owned && (
-          <div className="absolute top-1 right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow">
+          <div className="absolute top-1 right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow" aria-hidden="true">
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
@@ -51,10 +52,12 @@ function CardItem({ card, owned, onToggle, onInfo }: CardItemProps) {
       </button>
       <button
         onClick={(e) => { e.stopPropagation(); onInfo(); }}
-        title="View price"
-        className="absolute top-1 left-1 w-5 h-5 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
+        aria-label={`View price for ${card.name}`}
+        className="absolute top-0 left-0 w-11 h-11 flex items-center justify-center transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
       >
-        <span className="text-white text-[10px] font-bold leading-none">i</span>
+        <span className="w-5 h-5 bg-black/50 group-hover:bg-black/70 rounded-full flex items-center justify-center" aria-hidden="true">
+          <span className="text-white text-[10px] font-bold leading-none">i</span>
+        </span>
       </button>
     </div>
   );

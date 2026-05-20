@@ -38,10 +38,13 @@ export default function CardPriceModal({ card, loading, onClose }: Props) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/60" onClick={handleClose} />
+      <div className="fixed inset-0 z-50 bg-black/60" onClick={handleClose} aria-hidden="true" />
 
       {/* Bottom sheet on mobile → centered modal on desktop */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={card ? `Price info for ${card.name}` : "Price info"}
         className={`fixed z-50 bottom-0 inset-x-0 md:inset-auto md:left-1/2 md:top-1/2 md:w-full md:max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out md:max-h-[85vh] ${
           visible
             ? "translate-y-0 md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-100 md:scale-100"
@@ -49,7 +52,7 @@ export default function CardPriceModal({ card, loading, onClose }: Props) {
         }`}
       >
         {/* Drag handle — mobile only */}
-        <div className="md:hidden mx-auto mt-3 mb-1 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+        <div className="md:hidden mx-auto mt-3 mb-1 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" aria-hidden="true" />
 
         {/* Scrollable body */}
         <div className="overflow-y-auto max-h-[75vh] md:max-h-none px-5 pb-2">
@@ -65,18 +68,18 @@ export default function CardPriceModal({ card, loading, onClose }: Props) {
                 unoptimized
               />
             ) : (
-              <div className="w-14 h-[78px] rounded bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0" />
+              <div className="w-14 h-[78px] rounded bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0" aria-hidden="true" />
             )}
             <div className="flex-1 min-w-0">
               {card ? (
                 <>
                   <h2 className="font-bold text-gray-900 dark:text-gray-100 leading-tight">{card.name}</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5 truncate">
                     {card.set.name} #{card.number}{card.rarity ? ` · ${card.rarity}` : ""}
                   </p>
                 </>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2" aria-hidden="true">
                   <div className="h-4 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                   <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                 </div>
@@ -84,9 +87,10 @@ export default function CardPriceModal({ card, loading, onClose }: Props) {
             </div>
             <button
               onClick={handleClose}
-              className="shrink-0 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Close"
+              className="shrink-0 p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
-              <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -95,14 +99,14 @@ export default function CardPriceModal({ card, loading, onClose }: Props) {
           {/* Price content */}
           <div className="py-4">
             {loading ? (
-              <div className="flex items-center justify-center py-10">
+              <div className="flex items-center justify-center py-10" aria-label="Loading prices" role="status">
                 <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : !hasPrices ? (
-              <p className="text-sm text-center text-gray-400 dark:text-gray-500 py-8">No pricing data available</p>
+              <p className="text-sm text-center text-gray-600 dark:text-gray-400 py-8">No pricing data available</p>
             ) : (
               <>
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-3">
                   TCGPlayer Market Prices
                 </p>
                 <div className="space-y-3">
@@ -110,9 +114,9 @@ export default function CardPriceModal({ card, loading, onClose }: Props) {
                     <div key={type} className="rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{formatPriceType(type)}</span>
-                        <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{fmt(p.market)}</span>
+                        <span className="text-lg font-bold text-blue-700 dark:text-blue-400">{fmt(p.market)}</span>
                       </div>
-                      <div className="flex gap-4 text-xs text-gray-400 dark:text-gray-500">
+                      <div className="flex gap-4 text-xs text-gray-600 dark:text-gray-400">
                         <span>Low {fmt(p.low)}</span>
                         <span>Mid {fmt(p.mid)}</span>
                         <span>High {fmt(p.high)}</span>
@@ -133,13 +137,13 @@ export default function CardPriceModal({ card, loading, onClose }: Props) {
                 href={card.tcgplayer.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 text-center py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors"
+                className="flex-1 text-center py-3 min-h-[44px] flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               >
                 View on TCGPlayer
               </a>
             ) : <div />}
             {card.tcgplayer.updatedAt && (
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">
+              <p className="text-[11px] text-gray-600 dark:text-gray-400 shrink-0">
                 Updated {new Date(card.tcgplayer.updatedAt).toLocaleDateString()}
               </p>
             )}

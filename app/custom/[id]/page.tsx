@@ -130,9 +130,10 @@ export default function CustomSetPage({ params }: Props) {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{tracked.label}</h1>
           <button
             onClick={() => setEditOpen(true)}
-            className="shrink-0 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            aria-label="Edit collection options"
+            className="shrink-0 p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
             </svg>
           </button>
@@ -147,55 +148,72 @@ export default function CustomSetPage({ params }: Props) {
       </div>
 
       {/* Search to add cards */}
-      <div className="relative mb-6">
-        <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 transition-all">
-          <SearchIcon className="w-5 h-5 text-gray-400 shrink-0" />
-          <input
-            type="text"
-            value={query}
-            onChange={handleSearchChange}
-            onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
-            onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
-            placeholder="Search cards to add to this set…"
-            className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
-          />
-          {searching && <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />}
-        </div>
+      <div className="mb-6">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+              <SearchIcon className="w-5 h-5 text-gray-400 shrink-0" aria-hidden="true" />
+              <input
+                id="card-search"
+                type="text"
+                value={query}
+                onChange={handleSearchChange}
+                onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
+                onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+                onKeyDown={(e) => { if (e.key === "Enter") { if (debounceRef.current) clearTimeout(debounceRef.current); handleSearch(query); } }}
+                placeholder="Search cards to add to this set…"
+                aria-label="Search cards to add to this set"
+                aria-controls="card-search-results"
+                aria-expanded={searchOpen && searchResults.length > 0}
+                className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+              />
+              {searching && <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" aria-label="Searching" />}
+            </div>
 
-        {searchOpen && searchResults.length > 0 && (
-          <ul className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-72 overflow-y-auto">
-            {searchResults.map((card) => {
-              const already = alreadyInSet.has(card.id);
-              return (
-                <li key={card.id}>
-                  <button
-                    onMouseDown={() => { if (!already) addCard(card); }}
-                    disabled={already}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 transition-colors text-left"
-                  >
-                    <Image src={card.images.small} alt={card.name} width={36} height={50} className="object-contain shrink-0 rounded" unoptimized />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{card.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{card.set.name} #{card.number}</p>
-                    </div>
-                    {already
-                      ? <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Added</span>
-                      : <span className="text-xs text-blue-600 dark:text-blue-400 font-medium shrink-0">+ Add</span>
-                    }
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+            {searchOpen && searchResults.length > 0 && (
+              <ul id="card-search-results" role="listbox" className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+                {searchResults.map((card) => {
+                  const already = alreadyInSet.has(card.id);
+                  return (
+                    <li key={card.id} role="option" aria-selected={already}>
+                      <button
+                        onMouseDown={() => { if (!already) addCard(card); }}
+                        disabled={already}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 min-h-[44px] hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 transition-colors text-left focus-visible:outline-none focus-visible:bg-blue-50 dark:focus-visible:bg-blue-900/20"
+                      >
+                        <Image src={card.images.small} alt="" width={36} height={50} className="object-contain shrink-0 rounded" unoptimized />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{card.name}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{card.set.name} #{card.number}</p>
+                        </div>
+                        {already
+                          ? <span className="text-xs text-green-700 dark:text-green-400 font-medium shrink-0">Added</span>
+                          : <span className="text-xs text-blue-700 dark:text-blue-400 font-medium shrink-0">+ Add</span>
+                        }
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <button
+            onClick={() => { if (debounceRef.current) clearTimeout(debounceRef.current); handleSearch(query); }}
+            aria-label="Search cards"
+            className="shrink-0 px-5 py-2.5 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            Search
+          </button>
+        </div>
       </div>
 
       {/* Filters + edit toggle */}
       <div className="flex items-center justify-between gap-2 mb-5 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" role="group" aria-label="Filter cards">
           {(["all", "owned", "missing"] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors capitalize ${filter === f ? "bg-blue-600 text-white shadow-sm" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-400"}`}>
+              aria-pressed={filter === f}
+              className={`px-4 py-2 min-h-[44px] rounded-full text-sm font-medium transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${filter === f ? "bg-blue-600 text-white shadow-sm" : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-400"}`}>
               {f === "all" ? `All (${customCards.length})` : f === "owned" ? `Owned (${ownedCount})` : `Missing (${customCards.length - ownedCount})`}
             </button>
           ))}
@@ -203,7 +221,8 @@ export default function CustomSetPage({ params }: Props) {
         {customCards.length > 0 && (
           <button
             onClick={() => setIsEditing((v) => !v)}
-            className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${isEditing ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+            aria-pressed={isEditing}
+            className={`px-4 py-2 min-h-[44px] rounded-full text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${isEditing ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
           >
             {isEditing ? "Done" : "Edit Cards"}
           </button>
@@ -220,17 +239,19 @@ export default function CustomSetPage({ params }: Props) {
                 {isEditing && (
                   <button
                     onClick={() => removeCustomCard(id, card.id)}
-                    className="absolute -top-2 -right-2 z-20 w-6 h-6 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-full flex items-center justify-center shadow-md hover:bg-red-600 dark:hover:bg-red-500 dark:hover:text-white transition-colors"
+                    aria-label={`Remove ${card.name} from set`}
+                    className="absolute top-1.5 right-1.5 z-20 w-6 h-6 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-full flex items-center justify-center shadow-md hover:bg-red-600 dark:hover:bg-red-500 dark:hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   >
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 )}
                 <button
                   onClick={() => { if (!isEditing) toggleCard(id, card.id); }}
-                  title={`${card.name} — ${card.setName} — ${owned ? "Owned" : "Not owned"}`}
-                  className={`w-full relative rounded-lg overflow-hidden transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditing ? "cursor-pointer hover:scale-105" : "cursor-default"} ${owned ? "opacity-100 shadow-md" : "opacity-50 hover:opacity-70"}`}
+                  aria-label={`${card.name} from ${card.setName} — ${owned ? "Owned, click to unmark" : "Not owned, click to mark as owned"}`}
+                  aria-pressed={owned}
+                  className={`w-full relative rounded-lg overflow-hidden transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${!isEditing ? "cursor-pointer hover:scale-105" : "cursor-default"} ${owned ? "opacity-100 shadow-md" : "opacity-50 hover:opacity-70"}`}
                 >
                   <Image
                     src={card.imageSmall}
@@ -241,7 +262,7 @@ export default function CustomSetPage({ params }: Props) {
                     unoptimized
                   />
                   {owned && (
-                    <div className="absolute top-1 right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow">
+                    <div className="absolute top-1 right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow" aria-hidden="true">
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
@@ -250,10 +271,12 @@ export default function CustomSetPage({ params }: Props) {
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleInfo(card.id); }}
-                  title="View price"
-                  className="absolute top-1 left-1 w-5 h-5 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
+                  aria-label={`View price for ${card.name}`}
+                  className="absolute top-0 left-0 w-11 h-11 flex items-center justify-center transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                 >
-                  <span className="text-white text-[10px] font-bold leading-none">i</span>
+                  <span className="w-5 h-5 bg-black/50 group-hover:bg-black/70 rounded-full flex items-center justify-center" aria-hidden="true">
+                    <span className="text-white text-[10px] font-bold leading-none">i</span>
+                  </span>
                 </button>
               </div>
             );

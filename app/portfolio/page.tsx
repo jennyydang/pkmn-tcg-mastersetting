@@ -170,10 +170,19 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Line chart */}
-      {snapshots.length > 1 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-8 shadow-sm">
-          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Portfolio Value Over Time</p>
+      {/* Line chart — always shown */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-8 shadow-sm">
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Portfolio Value Over Time</p>
+        {loading ? (
+          <div className="flex items-center justify-center h-[220px]">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" aria-label="Loading chart" />
+          </div>
+        ) : snapshots.length < 2 ? (
+          <div className="flex flex-col items-center justify-center h-[220px] gap-2">
+            <p className="text-sm text-gray-400 dark:text-gray-500">No history yet</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Visit again tomorrow to see your first data point.</p>
+          </div>
+        ) : (
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={snapshots} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -194,8 +203,8 @@ export default function PortfolioPage() {
               <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Per-set breakdown accordion */}
       {breakdown.length > 0 && (
@@ -237,11 +246,15 @@ export default function PortfolioPage() {
                             i < row.cards.length - 1 ? "border-b border-gray-100 dark:border-gray-800" : ""
                           }`}
                         >
-                          <p className="flex-1 min-w-0 text-sm text-gray-700 dark:text-gray-300 truncate">{card.name}</p>
-                          <span className="text-xs font-mono text-gray-400 dark:text-gray-500 shrink-0">
-                            {card.number}{card.setTotal > 0 ? `/${card.setTotal}` : ""}
-                          </span>
-                          <p className={`text-sm shrink-0 ${card.price != null ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500"}`}>
+                          <p className="flex-1 min-w-0 text-sm text-gray-700 dark:text-gray-300 truncate">
+                            {card.name}
+                            {card.number && (
+                              <span className="text-gray-500 dark:text-gray-400 ml-1 font-mono">
+                                #{card.number}{card.setTotal > 0 ? `/${card.setTotal}` : ""}
+                              </span>
+                            )}
+                          </p>
+                          <p className={`text-sm shrink-0 ${card.price != null ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-500 dark:text-gray-400"}`}>
                             {card.price != null ? `$${card.price.toFixed(2)}` : "—"}
                           </p>
                         </div>
