@@ -113,13 +113,15 @@ export async function searchCards(query: string): Promise<PokemonCard[]> {
 
   let q: string;
   if (isNumberQuery) {
-    // Take only the part before "/" (card's own number, not the set total)
-    const raw = trimmed.split("/")[0];
-    // Strip leading zeros from purely numeric numbers ("057" → "57") since the
-    // TCG API stores card numbers without leading zeros for standard sets.
-    // Non-numeric prefixes like "TG01" or "SWSH001" are left unchanged.
-    const cardNumber = /^\d+$/.test(raw) ? String(parseInt(raw, 10)) : raw;
-    q = `number:${cardNumber}`;
+    const [rawNum, rawTotal] = trimmed.split("/");
+    // Strip leading zeros from purely numeric card numbers ("057" → "57")
+    const cardNumber = /^\d+$/.test(rawNum) ? String(parseInt(rawNum, 10)) : rawNum;
+    // When the total is a plain integer, include set.printedTotal to pin results
+    // to the specific set (e.g. "57/102" → number:57 set.printedTotal:102)
+    const totalNum = rawTotal !== undefined ? parseInt(rawTotal, 10) : NaN;
+    q = !isNaN(totalNum)
+      ? `number:${cardNumber} set.printedTotal:${totalNum}`
+      : `number:${cardNumber}`;
   } else {
     q = `name:${trimmed}`;
   }
