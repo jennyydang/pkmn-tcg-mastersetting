@@ -6,27 +6,33 @@ import { supabase } from "./supabase";
 import { useAuth } from "./auth";
 
 const STORAGE_KEY = "pkmn-tcg-mastersetting-v3";
+const COLLECTION_KEY = "pkmn-tcg-collection-v1";
 
 interface StoreContextValue {
-  trackedItems:    TrackedMasterSet[];
-  addItem:         (item: TrackedMasterSet) => void;
-  removeItem:      (id: string) => void;
-  toggleCard:      (id: string, cardId: string) => void;
-  isCardOwned:     (id: string, cardId: string) => boolean;
-  hasItem:         (id: string) => boolean;
-  updateTotal:     (id: string, total: number) => void;
-  reorderItems:    (fromId: string, toId: string) => void;
-  addCustomCard:   (itemId: string, card: CustomCardDef) => void;
-  removeCustomCard:(itemId: string, cardId: string) => void;
-  updateItem:      (id: string, updates: { label?: string; subtitle?: string }) => void;
+  trackedItems:        TrackedMasterSet[];
+  addItem:             (item: TrackedMasterSet) => void;
+  removeItem:          (id: string) => void;
+  toggleCard:          (id: string, cardId: string) => void;
+  isCardOwned:         (id: string, cardId: string) => boolean;
+  hasItem:             (id: string) => boolean;
+  updateTotal:         (id: string, total: number) => void;
+  reorderItems:        (fromId: string, toId: string) => void;
+  addCustomCard:       (itemId: string, card: CustomCardDef) => void;
+  removeCustomCard:    (itemId: string, cardId: string) => void;
+  updateItem:          (id: string, updates: { label?: string; subtitle?: string }) => void;
+  collectionCardIds:   string[];
+  addCollectionCard:   (cardId: string) => void;
+  removeCollectionCard:(cardId: string) => void;
+  isInCollection:      (cardId: string) => boolean;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [trackedItems, setTrackedItems] = useState<TrackedMasterSet[]>([]);
-  const [hydrated, setHydrated]         = useState(false);
+  const [trackedItems, setTrackedItems]           = useState<TrackedMasterSet[]>([]);
+  const [collectionCardIds, setCollectionCardIds] = useState<string[]>([]);
+  const [hydrated, setHydrated]                   = useState(false);
   // Only write to Supabase after we've confirmed the full server-state for this user.
   const loadedForUser = useRef<string | null>(null);
 
@@ -36,6 +42,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) setTrackedItems(JSON.parse(raw));
     } catch {}
+    try {
+      const rawCol = localStorage.getItem(COLLECTION_KEY);
+      if (rawCol) setCollectionCardIds(JSON.parse(rawCol));
+    } catch {}
     setHydrated(true);
   }, []);
 
@@ -43,31 +53,41 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) {
       setTrackedItems([]);
+      setCollectionCardIds([]);
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(COLLECTION_KEY);
       loadedForUser.current = null;
       return;
     }
 
     async function loadFromSupabase() {
-      const [{ data: sets, error: setsErr }, { data: cards, error: cardsErr }, { data: customCards, error: customErr }] =
-        await Promise.all([
-          supabase
-            .from("tracked_master_sets")
-            .select("item_id, type, label, image, total_cards, subtitle, sort_order")
-            .eq("user_id", user!.id)
-            .order("sort_order", { ascending: true }),
-          supabase
-            .from("owned_cards")
-            .select("item_id, card_id")
-            .eq("user_id", user!.id),
-          supabase
-            .from("custom_set_cards")
-            .select("item_id, card_id, card_name, card_image_small, card_set_name")
-            .eq("user_id", user!.id),
-        ]);
+      const [
+        { data: sets, error: setsErr },
+        { data: cards, error: cardsErr },
+        { data: customCards, error: customErr },
+        { data: colCards, error: colErr },
+      ] = await Promise.all([
+        supabase
+          .from("tracked_master_sets")
+          .select("item_id, type, label, image, total_cards, subtitle, sort_order")
+          .eq("user_id", user!.id)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("owned_cards")
+          .select("item_id, card_id")
+          .eq("user_id", user!.id),
+        supabase
+          .from("custom_set_cards")
+          .select("item_id, card_id, card_name, card_image_small, card_set_name")
+          .eq("user_id", user!.id),
+        supabase
+          .from("collection_cards")
+          .select("card_id")
+          .eq("user_id", user!.id),
+      ]);
 
-      if (setsErr || cardsErr || customErr) {
-        console.error("Supabase load error", setsErr ?? cardsErr ?? customErr);
+      if (setsErr || cardsErr || customErr || colErr) {
+        console.error("Supabase load error", setsErr ?? cardsErr ?? customErr ?? colErr);
         return;
       }
 
@@ -97,19 +117,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }));
 
       setTrackedItems(loaded);
+      setCollectionCardIds((colCards ?? []).map((r) => r.card_id));
       loadedForUser.current = user!.id;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+      localStorage.setItem(COLLECTION_KEY, JSON.stringify((colCards ?? []).map((r) => r.card_id)));
     }
 
     loadFromSupabase();
   }, [user]);
 
-  // ── 3. Keep localStorage in sync ─────────────────────────────────────────
+  // ── 3. Keep trackedItems in localStorage in sync ─────────────────────────
   useEffect(() => {
     if (hydrated && user) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(trackedItems));
     }
   }, [trackedItems, hydrated, user]);
+
+  // ── 4. Keep collectionCardIds in localStorage in sync ────────────────────
+  useEffect(() => {
+    if (hydrated && user) {
+      localStorage.setItem(COLLECTION_KEY, JSON.stringify(collectionCardIds));
+    }
+  }, [collectionCardIds, hydrated, user]);
 
   // Guard: only write to Supabase once the load for this user completed.
   function canWrite(uid: string | undefined): uid is string {
@@ -308,11 +337,48 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  function addCollectionCard(cardId: string) {
+    setCollectionCardIds((prev) => {
+      if (prev.includes(cardId)) return prev;
+      const next = [...prev, cardId];
+      if (canWrite(user?.id)) {
+        supabase
+          .from("collection_cards")
+          .upsert(
+            { user_id: user!.id, card_id: cardId },
+            { onConflict: "user_id,card_id", ignoreDuplicates: true }
+          )
+          .then(({ error }) => { if (error) console.error("addCollectionCard", error); });
+      }
+      return next;
+    });
+  }
+
+  function removeCollectionCard(cardId: string) {
+    setCollectionCardIds((prev) => {
+      const next = prev.filter((id) => id !== cardId);
+      if (canWrite(user?.id)) {
+        supabase
+          .from("collection_cards")
+          .delete()
+          .eq("user_id", user!.id)
+          .eq("card_id", cardId)
+          .then(({ error }) => { if (error) console.error("removeCollectionCard", error); });
+      }
+      return next;
+    });
+  }
+
+  function isInCollection(cardId: string): boolean {
+    return collectionCardIds.includes(cardId);
+  }
+
   return (
     <StoreContext.Provider value={{
       trackedItems, addItem, removeItem, toggleCard,
       isCardOwned, hasItem, updateTotal, reorderItems,
       addCustomCard, removeCustomCard, updateItem,
+      collectionCardIds, addCollectionCard, removeCollectionCard, isInCollection,
     }}>
       {children}
     </StoreContext.Provider>
