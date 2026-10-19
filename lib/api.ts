@@ -2,13 +2,28 @@ import { PokemonCard, PokemonSet } from "./types";
 
 const BASE_URL = "https://api.pokemontcg.io/v2";
 
+const MAX_ATTEMPTS = 4;
+
+// The API frequently answers 429/5xx or drops the connection; those are retried
+// with backoff (1s, 2s, 4s). Other errors (e.g. a 400 from a bad query) fail at once.
 async function apiFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    next: { revalidate: 3600 },
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+  for (let attempt = 1; ; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(`${BASE_URL}${path}`, {
+        headers: { "Content-Type": "application/json" },
+        next: { revalidate: 3600 },
+      });
+    } catch (e) {
+      if (attempt >= MAX_ATTEMPTS) throw e;
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
+      continue;
+    }
+    if (res.ok) return res.json();
+    const retryable = res.status === 429 || res.status >= 500;
+    if (!retryable || attempt >= MAX_ATTEMPTS) throw new Error(`API error: ${res.status}`);
+    await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
+  }
 }
 
 export interface SearchResult {
@@ -35,6 +50,11 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
       `/cards?q=artist:"${encodeURIComponent(trimmed)}"&pageSize=1`
     ),
   ]);
+
+  // If every request failed, the API is down — surface that instead of "No results".
+  if (setsRes.status === "rejected" && pokemonRes.status === "rejected" && artistRes.status === "rejected") {
+    throw setsRes.reason;
+  }
 
   const results: SearchResult[] = [];
 

@@ -10,6 +10,7 @@ export default function MasterSetSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<SearchResult | null>(null);
   const { addItem, hasItem } = useStore();
@@ -18,12 +19,15 @@ export default function MasterSetSearch() {
   async function search(q: string) {
     if (!q.trim()) { setResults([]); setOpen(false); return; }
     setLoading(true);
+    setError(false);
     try {
       const data = await searchAll(q);
       setResults(data);
       setOpen(true);
     } catch {
       setResults([]);
+      setError(true);
+      setOpen(true);
     } finally {
       setLoading(false);
     }
@@ -110,7 +114,13 @@ export default function MasterSetSearch() {
           </ul>
         )}
 
-        {open && !loading && !hasResults && query.trim() && (
+        {open && !loading && error && query.trim() && (
+          <div className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm text-red-500 dark:text-red-400">
+            The card database isn&rsquo;t responding right now. Please try again in a minute.
+          </div>
+        )}
+
+        {open && !loading && !error && !hasResults && query.trim() && (
           <div className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
             No results for &ldquo;{query}&rdquo;
           </div>
