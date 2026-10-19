@@ -41,7 +41,7 @@ interface RawJaSet extends RawJaSetBrief {
   cards: RawJaCardBrief[];
 }
 
-type CardmarketPrices = Record<string, number | string | null | undefined>;
+export type CardmarketPrices = Record<string, number | string | null | undefined>;
 
 interface RawJaCard extends RawJaCardBrief {
   rarity?: string;
@@ -129,7 +129,7 @@ function num(v: unknown): number | undefined {
  * version, which on cards that also come non-foil is the reverse holo. Uses the
  * price trend, falling back to the 30-day average.
  */
-function toPrices(cm: CardmarketPrices | null | undefined, variants: CardVariant[], rate: number) {
+export function cardmarketPrices(cm: CardmarketPrices | null | undefined, variants: CardVariant[], rate: number) {
   if (!cm) return undefined;
   const usd = (n: number | undefined) => (n == null ? undefined : Math.round(n * rate * 100) / 100);
   const pick = (suffix: string): TCGPlayerPrice | undefined => {
@@ -169,7 +169,7 @@ export async function getJaCard(id: string): Promise<PokemonCard> {
   const set = (await getJaSetCatalog()).get(JA_PREFIX + raw.set.id) ?? toSet({ id: raw.set.id, name: raw.set.id, cardCount: { official: 0, total: 0 } });
   const variants = raw.variants ? VARIANT_ORDER.filter((v) => raw.variants![v]) : undefined;
   const english = raw.category === "Pokemon" ? englishName(raw.name, raw.dexId) : undefined;
-  const prices = toPrices(raw.pricing?.cardmarket, variants ?? ["normal"], rate);
+  const prices = cardmarketPrices(raw.pricing?.cardmarket, variants ?? ["normal"], rate);
   return {
     ...briefToCard(raw, set, english),
     rarity: raw.rarity && raw.rarity !== "None" ? raw.rarity : undefined,

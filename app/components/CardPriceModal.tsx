@@ -117,7 +117,7 @@ export default function CardPriceModal({ card, loading, onClose, cardKey, owned 
                   {card?.priceSource === "cardmarket" ? "Cardmarket prices, in US dollars" : "TCGPlayer Market Prices"}
                 </p>
                 {card?.priceSource === "cardmarket" && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2 mb-3">Japanese card prices from Cardmarket (Europe), converted from euros at today’s rate. An estimate.</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2 mb-3">Prices from Cardmarket (Europe), converted from euros at today’s rate, for cards TCGplayer doesn’t price (like Japanese cards and some promos). An estimate.</p>
                 )}
                 <div className="space-y-3">
                   {Object.entries(prices!).map(([type, p]) => (

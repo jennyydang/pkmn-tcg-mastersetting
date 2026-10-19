@@ -2,7 +2,8 @@ import { CardVariant, PokemonCard, PokemonSet, TCGPlayerPrice } from "./types";
 import { legacyImageUrl } from "./legacyIds";
 import { VARIANT_ORDER } from "./variants";
 import { ApiError, gql, restFetch } from "./tcgdex";
-import { JA_PREFIX, findJaSetCode, getJaCard, getJaCardsForSet, getJaSet, isJapaneseId, searchJaByName, searchJaByNumber, searchJaSets } from "./japanese";
+import { eurToUsdRate } from "./exchange";
+import { CardmarketPrices, JA_PREFIX, cardmarketPrices, findJaSetCode, getJaCard, getJaCardsForSet, getJaSet, isJapaneseId, searchJaByName, searchJaByNumber, searchJaSets } from "./japanese";
 
 // Card data comes from TCGdex (https://tcgdex.dev). GraphQL is used for searches and
 // card lists (one request returns each card's set); REST is used for single cards
@@ -48,6 +49,7 @@ interface RawCard {
   variants?: Partial<Record<CardVariant, boolean>> | null;
   pricing?: {
     tcgplayer?: { updated?: string; unit?: string } & Record<string, RawTcgplayerPrice | string | undefined>;
+    cardmarket?: CardmarketPrices | null;
   } | null;
 }
 
@@ -345,7 +347,14 @@ export async function getCard(id: string): Promise<PokemonCard> {
   const catalog = await getSetCatalog();
   const set = catalog.get(raw.set.id);
   if (!set) throw new Error(`Card ${id} is not part of the physical TCG`);
-  return toCard(raw, set);
+  const card = toCard(raw, set);
+  // Some cards (often promos) have no TCGplayer price on TCGdex but do have a
+  // Cardmarket one: use that, converted to dollars and labelled as such.
+  if (!card.tcgplayer && raw.pricing?.cardmarket) {
+    const prices = cardmarketPrices(raw.pricing.cardmarket, card.variants ?? ["normal"], await eurToUsdRate());
+    if (prices) return { ...card, tcgplayer: prices, priceSource: "cardmarket" };
+  }
+  return card;
 }
 
 export async function getSet(id: string): Promise<PokemonSet> {
