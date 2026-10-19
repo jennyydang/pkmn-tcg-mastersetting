@@ -9,11 +9,11 @@ import { CardVariant, PokemonCard, TCGPlayerPrice } from "./types";
 
 export const VARIANT_ORDER: CardVariant[] = ["normal", "holo", "reverse", "firstEdition"];
 
-export const VARIANT_LABELS: Record<CardVariant, { short: string; long: string }> = {
-  normal:       { short: "N",   long: "Normal" },
-  holo:         { short: "H",   long: "Holo" },
-  reverse:      { short: "R",   long: "Reverse Holo" },
-  firstEdition: { short: "1st", long: "1st Edition" },
+export const VARIANT_LABELS: Record<CardVariant, { long: string }> = {
+  normal:       { long: "Normal" },
+  holo:         { long: "Holo" },
+  reverse:      { long: "Reverse Holo" },
+  firstEdition: { long: "1st Edition" },
 };
 
 const SEPARATOR = "|";

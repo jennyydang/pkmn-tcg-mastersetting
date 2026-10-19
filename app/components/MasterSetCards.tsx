@@ -6,7 +6,7 @@ import { getCardsByIds } from "@/lib/api";
 import { useIncludeVariants } from "@/lib/prefs";
 import { CardVariant, PokemonCard } from "@/lib/types";
 import { VARIANT_LABELS, cardVariants, ownedKey, variantPrice } from "@/lib/variants";
-import CardGrid from "./CardGrid";
+import CardGrid, { CardTile } from "./CardGrid";
 
 interface Props {
   cards: PokemonCard[];
@@ -30,29 +30,32 @@ export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetName
   const [filter, setFilter] = useState<Filter>("all");
   const owned = useMemo(() => new Set(ownedKeys), [ownedKeys]);
 
-  // "Owned" = any version owned. "Missing" = nothing owned, or with variants on,
-  // any version still missing.
-  const status = useMemo(() => {
-    const ownedIds = new Set<string>(), missingIds = new Set<string>();
+  // With variants on, every printed version is its own tile (labelled when a card
+  // has more than one). Off, each card is one tile that counts as owned if any
+  // version is, and tapping it marks the base version.
+  const { tiles, missing } = useMemo(() => {
+    const tiles: CardTile[] = [];
     const missing: MissingEntry[] = [];
     for (const card of cards) {
       const versions = cardVariants(card);
-      const have = versions.map((v) => owned.has(ownedKey(card, v)));
-      if (have.some(Boolean)) ownedIds.add(card.id);
       if (includeVariants) {
-        versions.forEach((v, i) => { if (!have[i]) missing.push({ card, variant: v }); });
-        if (have.some((h) => !h)) missingIds.add(card.id);
-      } else if (!have.some(Boolean)) {
-        missing.push({ card, variant: null });
-        missingIds.add(card.id);
+        for (const v of versions) {
+          const key = ownedKey(card, v);
+          const has = owned.has(key);
+          tiles.push({ card, key, variant: versions.length > 1 ? v : null, owned: has });
+          if (!has) missing.push({ card, variant: v });
+        }
+      } else {
+        const has = versions.some((v) => owned.has(ownedKey(card, v)));
+        tiles.push({ card, key: ownedKey(card, versions[0]), variant: null, owned: has });
+        if (!has) missing.push({ card, variant: null });
       }
     }
-    return { ownedIds, missingIds, missing };
+    return { tiles, missing };
   }, [cards, owned, includeVariants]);
 
-  const filtered = cards.filter((c) =>
-    filter === "owned" ? status.ownedIds.has(c.id) : filter === "missing" ? status.missingIds.has(c.id) : true
-  );
+  const ownedCount = tiles.filter((t) => t.owned).length;
+  const filtered = tiles.filter((t) => (filter === "owned" ? t.owned : filter === "missing" ? !t.owned : true));
 
   return (
     <>
@@ -61,17 +64,17 @@ export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetName
           <button key={f} onClick={() => setFilter(f)}
             aria-pressed={filter === f}
             className={`px-4 py-2 min-h-[44px] rounded-full text-sm font-medium transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${filter === f ? "bg-blue-600 text-white shadow-sm" : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-400"}`}>
-            {f === "all" ? `All (${cards.length})` : f === "owned" ? `Owned (${status.ownedIds.size})` : `Missing (${status.missingIds.size})`}
+            {f === "all" ? `All (${tiles.length})` : f === "owned" ? `Owned (${ownedCount})` : `Missing (${tiles.length - ownedCount})`}
           </button>
         ))}
       </div>
 
-      {status.missing.length > 0 && (
-        <WhatsLeft entries={status.missing} includeVariants={includeVariants} showSetNames={showSetNames} />
+      {missing.length > 0 && (
+        <WhatsLeft entries={missing} includeVariants={includeVariants} showSetNames={showSetNames} />
       )}
 
       {filtered.length > 0 ? (
-        <CardGrid cards={filtered} ownedKeys={owned} showVariants={includeVariants} onToggle={onToggle} />
+        <CardGrid tiles={filtered} onToggle={onToggle} />
       ) : (
         <div className="py-16 text-center text-gray-400 dark:text-gray-600"><p className="text-lg">No cards to show</p></div>
       )}
