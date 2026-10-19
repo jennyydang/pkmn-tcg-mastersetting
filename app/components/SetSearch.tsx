@@ -69,7 +69,7 @@ export default function MasterSetSearch() {
   return (
     <>
       <div className="flex items-center gap-2 w-full">
-      <div className="relative flex-1">
+      <div className="relative flex-1 min-w-0">
         <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 transition-all">
           <SearchIcon className="w-5 h-5 text-gray-400 shrink-0" />
           <input
@@ -78,7 +78,7 @@ export default function MasterSetSearch() {
             onChange={handleChange}
             onKeyDown={(e) => { if (e.key === "Enter") handleSearchButton(); }}
             placeholder="Search a Pokémon, set, or artist…"
-            className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+            className="flex-1 min-w-0 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
             onFocus={() => hasResults && setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 150)}
           />

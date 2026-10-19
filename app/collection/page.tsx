@@ -248,7 +248,7 @@ export default function CollectionPage() {
       {/* Add row: search (the scanner is the camera button in the tab bar) */}
       <form onSubmit={handleSearchSubmit} role="search" className="flex gap-2 mb-6">
         {/* Search input with dropdown */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 transition-all">
             <SearchIcon className="w-5 h-5 text-gray-400 shrink-0" aria-hidden="true" />
             <input

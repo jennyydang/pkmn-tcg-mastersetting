@@ -135,7 +135,7 @@ export function PickStep({ scan, candidates, onPick, onRetry, retryLabel = "Scan
         <div className="flex-1 flex items-center gap-2 px-3 min-h-[44px] rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
           <SearchIcon className="w-4 h-4 text-gray-400" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Name or number, e.g. 025/165"
-            className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100" aria-label="Search cards" />
+            className="flex-1 min-w-0 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100" aria-label="Search cards" />
         </div>
         <button type="submit" className="px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold">{searching ? "…" : "Search"}</button>
       </form>

@@ -164,7 +164,7 @@ function CustomSetView() {
       {/* Search to add cards */}
       <div className="mb-6">
         <div className="flex items-center gap-2">
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 transition-all">
               <SearchIcon className="w-5 h-5 text-gray-400 shrink-0" aria-hidden="true" />
               <input
@@ -179,7 +179,7 @@ function CustomSetView() {
                 aria-label="Search cards by name or card number to add to this set"
                 aria-controls="card-search-results"
                 aria-expanded={searchOpen && searchResults.length > 0}
-                className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+                className="flex-1 min-w-0 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
               />
               {searching && <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" aria-label="Searching" />}
             </div>
