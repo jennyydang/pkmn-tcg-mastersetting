@@ -5,8 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { PokeBallIcon } from "./Icons";
 
 export default function AuthModal() {
-  const { signIn, signUp } = useAuth();
-  const [mode, setMode]         = useState<"signin" | "signup">("signin");
+  const { signIn, signUp, resetPassword } = useAuth();
+  const [mode, setMode]         = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]       = useState<string | null>(null);
@@ -22,6 +22,10 @@ export default function AuthModal() {
         const err = await signIn(email, password);
         if (err) setError(err.message);
         // On success, user state updates → home page unmounts this modal
+      } else if (mode === "forgot") {
+        const err = await resetPassword(email);
+        if (err) setError(err.message);
+        else setConfirmed(true);
       } else {
         const err = await signUp(email, password);
         if (err) setError(err.message);
@@ -32,7 +36,7 @@ export default function AuthModal() {
     }
   }
 
-  function switchMode(next: "signin" | "signup") {
+  function switchMode(next: "signin" | "signup" | "forgot") {
     setMode(next);
     setError(null);
     setConfirmed(false);
@@ -46,7 +50,11 @@ export default function AuthModal() {
           <PokeBallIcon className="w-12 h-12 text-red-500" />
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Master Set Tracker</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-            {mode === "signin" ? "Sign in to access your collection." : "Create an account to start tracking."}
+            {mode === "signin"
+              ? "Sign in to access your collection."
+              : mode === "forgot"
+                ? "Enter your email and we'll send you a reset link."
+                : "Create an account to start tracking."}
           </p>
         </div>
 
@@ -54,7 +62,9 @@ export default function AuthModal() {
         <form onSubmit={handleSubmit} className="px-6 pb-6 pt-2 space-y-4">
           {confirmed ? (
             <div className="rounded-xl bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 p-4 text-sm text-green-700 dark:text-green-300">
-              Account created! Check your email to confirm, then sign in.
+              {mode === "forgot"
+                ? "If an account exists for that email, a password reset link is on its way."
+                : "Account created! Check your email to confirm, then sign in."}
             </div>
           ) : (
             <>
@@ -67,15 +77,25 @@ export default function AuthModal() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <input
-                  type="password"
-                  required
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                {mode !== "forgot" && (
+                  <input
+                    type="password"
+                    required
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
               </div>
+
+              {mode === "signin" && (
+                <div className="-mt-2 text-right">
+                  <button type="button" onClick={() => switchMode("forgot")} className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                    Forgot password?
+                  </button>
+                </div>
+              )}
 
               {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
 
@@ -84,7 +104,7 @@ export default function AuthModal() {
                 disabled={loading}
                 className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-sm font-semibold text-white transition-colors"
               >
-                {loading ? "Please wait…" : mode === "signin" ? "Sign In" : "Create Account"}
+                {loading ? "Please wait…" : mode === "signin" ? "Sign In" : mode === "forgot" ? "Send Reset Link" : "Create Account"}
               </button>
             </>
           )}
@@ -97,7 +117,7 @@ export default function AuthModal() {
                 </button>
               </>
             ) : (
-              <>Already have an account?{" "}
+              <>{mode === "forgot" ? "Remembered it?" : "Already have an account?"}{" "}
                 <button type="button" onClick={() => switchMode("signin")} className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
                   Sign in
                 </button>
