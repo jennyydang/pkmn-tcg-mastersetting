@@ -9,13 +9,15 @@ import { useAuth } from "@/lib/auth";
 import { getCardsByIds, getCard, searchCards } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
+import CollectionMasterSets from "@/app/components/CollectionMasterSets";
+import { ownedCardIds } from "@/lib/variants";
 import CardScanSheet, { useCanScan } from "@/app/components/CardScanSheet";
 import { CardsIcon, ChevronRightIcon, SearchIcon } from "@/app/components/Icons";
 
 export default function CollectionPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { collectionCardIds, addCollectionCard, removeCollectionCard, isInCollection } = useStore();
+  const { collectionCardIds, addCollectionCard, removeCollectionCard, isInCollection, trackedItems } = useStore();
 
   const [cards, setCards]               = useState<PokemonCard[]>([]);
   const [loading, setLoading]           = useState(true);
@@ -134,6 +136,11 @@ export default function CollectionPage() {
     });
   }
 
+  // Everything owned, counted once: cards added here plus cards marked owned in master sets.
+  const setsWithCards = trackedItems.filter((t) => t.ownedCards.length > 0);
+  const allOwned = new Set(collectionCardIds);
+  for (const t of setsWithCards) for (const id of ownedCardIds(t.ownedCards)) allOwned.add(id);
+
   if (authLoading || !user) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -155,9 +162,12 @@ export default function CollectionPage() {
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">My Collection</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          {collectionCardIds.length === 0
+          {allOwned.size === 0
             ? "No cards yet"
-            : `${collectionCardIds.length} card${collectionCardIds.length === 1 ? "" : "s"} in your collection`}
+            : `${allOwned.size} card${allOwned.size === 1 ? "" : "s"} owned`
+              + (setsWithCards.length > 0
+                ? ` · ${collectionCardIds.length} added here · across ${setsWithCards.length} master set${setsWithCards.length === 1 ? "" : "s"}`
+                : "")}
         </p>
       </div>
 
@@ -237,6 +247,10 @@ export default function CollectionPage() {
         </button>}
       </div>
 
+      {setsWithCards.length > 0 && (
+        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">Added cards</h2>
+      )}
+
       {/* Card grid */}
       {loading ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
@@ -248,6 +262,8 @@ export default function CollectionPage() {
             />
           ))}
         </div>
+      ) : cards.length === 0 && setsWithCards.length > 0 ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400">No cards added here yet. Search above to add cards that aren’t part of a master set.</p>
       ) : cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
           <CardsIcon className="w-12 h-12" />
@@ -293,6 +309,8 @@ export default function CollectionPage() {
           ))}
         </div>
       )}
+
+      <CollectionMasterSets items={trackedItems} />
 
       {/* Price modal */}
       {priceOpen && (

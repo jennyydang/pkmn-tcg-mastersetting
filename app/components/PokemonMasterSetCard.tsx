@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ownedCardIds } from "@/lib/variants";
+import { masterSetHref } from "@/lib/links";
 import Link from "next/link";
 import Image from "next/image";
 import { useSortable } from "@dnd-kit/sortable";
@@ -68,13 +69,7 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
         onPointerUp: handleLongPressUp,
       };
 
-  const href = type === "set"
-    ? `/sets?id=${encodeURIComponent(id)}`
-    : type === "artist"
-    ? `/artist?name=${encodeURIComponent(id)}`
-    : type === "custom"
-    ? `/custom?id=${encodeURIComponent(id)}`
-    : `/pokemon?name=${encodeURIComponent(id)}`;
+  const href = masterSetHref(tracked);
 
   const cardContent = (
     <>
