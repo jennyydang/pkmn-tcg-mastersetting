@@ -16,13 +16,15 @@ import { CardsIcon, ChevronRightIcon, SearchIcon, SwapIcon, TrendingUpIcon } fro
 import { useCardData } from "@/lib/cardData";
 import { extrasFromDetails } from "@/lib/trade";
 import { setFitsCard, setsHoldingCard } from "@/lib/setMembership";
-import AddToSetsSheet from "@/app/components/AddToSetsSheet";
+import AddToSetsSheet, { addedIntro } from "@/app/components/AddToSetsSheet";
+import { useAddToCollection } from "@/lib/addCopies";
 
 export default function CollectionPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { collectionCardIds, addCollectionCard, removeCollectionCard, isInCollection, trackedItems, toggleCard } = useStore();
+  const { collectionCardIds, removeCollectionCard, isInCollection, trackedItems, toggleCard } = useStore();
   const { details } = useCardData();
+  const addToCollection = useAddToCollection();
   const extraCount = extrasFromDetails(details).reduce((n, e) => n + e.count, 0);
 
   const [cards, setCards]               = useState<PokemonCard[]>([]);
@@ -136,19 +138,22 @@ export default function CollectionPage() {
     if (query.trim()) runSearch(query);
   }
 
-  function handleAddFromSearch(card: PokemonCard) {
-    addCollectionCard(card.id);
+  async function handleAddFromSearch(result: PokemonCard) {
+    setQuery("");
+    setSearchResults([]);
+    setSearchOpen(false);
+    // Search results can lack details (like the artist) needed to find every
+    // master set the card belongs to; the full card is usually already cached.
+    const card = await getCard(result.id).catch(() => result);
+    const checked = addToCollection(card);
     cardCache.current.set(card.id, card);
     // Optimistically prepend to cards
     setCards((prev) => {
       if (prev.some((c) => c.id === card.id)) return prev;
       return [card, ...prev];
     });
-    setQuery("");
-    setSearchResults([]);
-    setSearchOpen(false);
     // Offer to count it toward any tracked sets it belongs to.
-    if (trackedItems.some((t) => setFitsCard(t, card))) setSetsFor({ card, intro: "Added to your collection" });
+    if (trackedItems.some((t) => setFitsCard(t, card))) setSetsFor({ card, intro: addedIntro(checked) });
   }
 
   // The grid shows every card you own, so removing a card also unchecks it in

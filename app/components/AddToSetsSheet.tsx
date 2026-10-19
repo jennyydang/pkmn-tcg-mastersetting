@@ -20,6 +20,13 @@ const TYPE_LABELS: Record<TrackedMasterSet["type"], string> = {
   custom: "Custom set",
 };
 
+/** Sheet intro after adding a card to the collection. */
+export function addedIntro(setsChecked: number) {
+  return setsChecked > 0
+    ? `Added to your collection and checked off in ${setsChecked} ${setsChecked === 1 ? "set" : "sets"}`
+    : "Added to your collection";
+}
+
 interface Props {
   card: PokemonCard;
   onClose: () => void;

@@ -161,7 +161,7 @@ export default function BatchScan({ toggle }: { toggle: React.ReactNode }) {
         <CheckCircleIcon className="w-16 h-16 text-green-500 pop-in" />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Added {view.cards} {view.cards === 1 ? "card" : "cards"}</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-          They’re in your collection{view.setsTicked > 0 ? `, and ${view.setsTicked} ${view.setsTicked === 1 ? "was" : "were"} ticked off in your master sets` : ""}.
+          They’re in your collection{view.setsTicked > 0 ? `, and ${view.setsTicked} ${view.setsTicked === 1 ? "was" : "were"} checked off in your master sets` : ""}.
           {" "}Duplicates show up in your <Link href="/extras" className="text-blue-600 dark:text-blue-400 font-medium">Extras</Link> for trading.
         </p>
         <div className="flex gap-3 mt-4">

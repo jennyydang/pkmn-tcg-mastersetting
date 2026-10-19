@@ -17,7 +17,8 @@ import CardImage from "@/app/components/CardImage";
 import { CheckIcon, StarIcon } from "@/app/components/Icons";
 import { CameraStep, PickStep } from "./ScanSteps";
 import BatchScan from "./BatchScan";
-import AddToSetsSheet from "@/app/components/AddToSetsSheet";
+import AddToSetsSheet, { addedIntro } from "@/app/components/AddToSetsSheet";
+import { useAddToCollection } from "@/lib/addCopies";
 import { setFitsCard, setsHoldingCard } from "@/lib/setMembership";
 
 type Step =
@@ -109,7 +110,8 @@ function SingleScan({ toggle }: { toggle: React.ReactNode }) {
 }
 
 function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loading: boolean; onScanAnother: () => void }) {
-  const { addCollectionCard, isInCollection, trackedItems } = useStore();
+  const { isInCollection, trackedItems } = useStore();
+  const addToCollection = useAddToCollection();
   const [setsOpen, setSetsOpen] = useState<{ intro?: string } | null>(null);
   const fitsSomeSet = trackedItems.some((t) => setFitsCard(t, card));
   const setCount = setsHoldingCard(trackedItems, card.id).length;
@@ -169,7 +171,7 @@ function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loadi
       </section>
 
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => { addCollectionCard(card.id); successFeedback(); if (fitsSomeSet) setSetsOpen({ intro: "Added to your collection" }); }} disabled={inCollection}
+        <button onClick={() => { const checked = addToCollection(card, variant); successFeedback(); if (fitsSomeSet) setSetsOpen({ intro: addedIntro(checked) }); }} disabled={inCollection}
           className="flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-green-600 text-white text-sm font-semibold transition-colors">
           {inCollection ? <><CheckIcon className="w-4 h-4" /> In collection</> : "Add to collection"}
         </button>
