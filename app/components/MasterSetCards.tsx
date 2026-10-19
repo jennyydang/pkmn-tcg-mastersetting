@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import CardImage from "./CardImage";
-import { getCardsByIds } from "@/lib/api";
+import { getCardsByIds, normalizeNumber } from "@/lib/api";
 import { useCardView, useIncludeVariants } from "@/lib/prefs";
 import { CardVariant, PokemonCard } from "@/lib/types";
 import { VARIANT_LABELS, cardVariants, ownedKey, variantPrice } from "@/lib/variants";
@@ -11,6 +11,7 @@ import { staggerStyle } from "@/lib/motion";
 import BinderView from "./BinderView";
 import QuickAdd from "./QuickAdd";
 import SaveOffline from "./SaveOffline";
+import { SearchIcon } from "./Icons";
 
 interface Props {
   cards: PokemonCard[];
@@ -32,11 +33,30 @@ interface MissingEntry {
   variant: CardVariant | null;
 }
 
+// Lowercase without accents, so "pokemon" finds "Pokémon".
+const fold = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/**
+ * Whether a tile matches every word of a search. Numbers match the card number
+ * exactly ("25", "025" and "025/165" all find #025); other words match the
+ * name, set, rarity, artist or version.
+ */
+function tileMatches(tile: CardTile, words: string[]) {
+  const { card, variant } = tile;
+  const text = fold([card.name, card.localName, card.set.name, card.rarity, card.illustrator, variant && VARIANT_LABELS[variant].long].filter(Boolean).join(" "));
+  return words.every((w) => {
+    const number = /^#?([a-z]*\d+)(\/\S*)?$/i.exec(w);
+    if (number) return normalizeNumber(card.number) === normalizeNumber(number[1]);
+    return text.includes(fold(w));
+  });
+}
+
 // Filters, What's left and the card grid for a set, Pokémon or artist page.
 export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetNames = false, quickAdd = false, offlineKey }: Props) {
   const [includeVariants] = useIncludeVariants();
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useCardView();
+  const [query, setQuery] = useState("");
   const owned = useMemo(() => new Set(ownedKeys), [ownedKeys]);
 
   // With variants on, every printed version is its own tile (labelled when a card
@@ -63,8 +83,14 @@ export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetName
     return { tiles, missing };
   }, [cards, owned, includeVariants]);
 
-  const ownedCount = tiles.filter((t) => t.owned).length;
-  const filtered = tiles.filter((t) => (filter === "owned" ? t.owned : filter === "missing" ? !t.owned : true));
+  // Search narrows the tiles first; the filter chips then count and filter what's left.
+  const words = query.trim().split(/\s+/).filter(Boolean);
+  const searching = words.length > 0;
+  const matching = searching ? tiles.filter((t) => tileMatches(t, words)) : tiles;
+  const ownedCount = matching.filter((t) => t.owned).length;
+  const filtered = matching.filter((t) => (filter === "owned" ? t.owned : filter === "missing" ? !t.owned : true));
+  // A binder shows every pocket in order, so search results show as a grid.
+  const showGrid = view === "grid" || searching;
 
   return (
     <>
@@ -72,16 +98,37 @@ export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetName
 
       {quickAdd && <QuickAdd cards={cards} owned={owned} onToggle={onToggle} />}
 
+      <div role="search" className="mb-3">
+        <label className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+          <SearchIcon className="w-5 h-5 text-gray-400 shrink-0" />
+          <input
+            type="search"
+            enterKeyHint="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+            placeholder="Search these cards: name, number, rarity…"
+            aria-label="Search cards in this master set"
+            className="flex-1 min-w-0 appearance-none bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+          />
+        </label>
+        {searching && (
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400" role="status">
+            {matching.length === 0 ? `No cards match “${query.trim()}”` : `${matching.length} ${matching.length === 1 ? "card matches" : "cards match"}`}
+          </p>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2 mb-5">
         {/* A binder shows every pocket in order, so filters only apply to the grid. */}
-        {view === "grid" && <div className="flex flex-wrap gap-2" role="group" aria-label="Filter cards">{(["all", "owned", "missing"] as const).map((f) => (
+        {showGrid && <div className="flex flex-wrap gap-2" role="group" aria-label="Filter cards">{(["all", "owned", "missing"] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)}
             aria-pressed={filter === f}
             className={`px-4 py-2 min-h-[44px] rounded-full text-sm font-medium transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${filter === f ? "bg-blue-600 text-white shadow-sm" : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-400"}`}>
-            {f === "all" ? `All (${tiles.length})` : f === "owned" ? `Owned (${ownedCount})` : `Missing (${tiles.length - ownedCount})`}
+            {f === "all" ? `All (${matching.length})` : f === "owned" ? `Owned (${ownedCount})` : `Missing (${matching.length - ownedCount})`}
           </button>
         ))}</div>}
-        {view === "binder" && (
+        {!showGrid && (
           <p className="text-sm text-gray-500 dark:text-gray-400">{ownedCount} of {tiles.length} pockets filled</p>
         )}
         <div className="ml-auto flex rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0.5" role="radiogroup" aria-label="View">
@@ -96,16 +143,19 @@ export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetName
         </div>
       </div>
 
-      {missing.length > 0 && (
+      {missing.length > 0 && !searching && (
         <WhatsLeft entries={missing} includeVariants={includeVariants} showSetNames={showSetNames} />
       )}
 
-      {view === "binder" ? (
+      {!showGrid ? (
         <BinderView tiles={tiles} onToggle={onToggle} />
       ) : filtered.length > 0 ? (
         <CardGrid tiles={filtered} onToggle={onToggle} />
       ) : (
-        <div className="py-16 text-center text-gray-400 dark:text-gray-600"><p className="text-lg">No cards to show</p></div>
+        <div className="py-16 text-center text-gray-400 dark:text-gray-600">
+          <p className="text-lg">No cards to show</p>
+          {searching && <button onClick={() => setQuery("")} className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">Clear search</button>}
+        </div>
       )}
     </>
   );

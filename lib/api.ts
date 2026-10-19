@@ -357,19 +357,22 @@ export async function getSet(id: string): Promise<PokemonSet> {
 
 export async function getCardsForSet(setId: string): Promise<PokemonCard[]> {
   if (isJapaneseId(setId)) return getJaCardsForSet(setId);
-  // REST gives the set's cards in printed order; GraphQL adds each card's variants
-  // (the ID filter matches substrings, hence the set check). If GraphQL fails the
-  // set still loads, with every card counted as a single version.
+  // REST gives the set's cards in printed order; GraphQL adds each card's variants,
+  // rarity and artist (the ID filter matches substrings, hence the set check). If
+  // GraphQL fails the set still loads, with every card counted as a single version.
   const [set, raw, withVariants] = await Promise.all([
     getSet(setId),
     restFetch<{ cards: { id: string; localId: string; name: string; image?: string }[] }>(`/sets/${encodeURIComponent(setId)}`),
-    gql<{ cards: Pick<RawCard, "id" | "set" | "variants">[] }>(
-      `query ($prefix: ID) { cards(filters: { id: $prefix }) { id set { id } variants { normal reverse holo firstEdition } } }`,
+    gql<{ cards: Pick<RawCard, "id" | "set" | "variants" | "rarity" | "illustrator">[] }>(
+      `query ($prefix: ID) { cards(filters: { id: $prefix }) { id set { id } rarity illustrator variants { normal reverse holo firstEdition } } }`,
       { prefix: `${setId}-` }
     ).catch((e) => { console.error("Couldn't load variants", e); return { cards: [] }; }),
   ]);
-  const variants = new Map(withVariants.cards.filter((c) => c.set?.id === setId).map((c) => [c.id, c.variants]));
-  return raw.cards.map((c) => toCard({ ...c, set: { id: setId }, variants: variants.get(c.id) }, set));
+  const extra = new Map(withVariants.cards.filter((c) => c.set?.id === setId).map((c) => [c.id, c]));
+  return raw.cards.map((c) => {
+    const more = extra.get(c.id);
+    return toCard({ ...c, set: { id: setId }, variants: more?.variants, rarity: more?.rarity, illustrator: more?.illustrator }, set);
+  });
 }
 
 // Fetches full cards (with prices) a few at a time. Unknown IDs are skipped.
