@@ -10,7 +10,7 @@ import { getCardsByIds, getCard, searchCards } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
 import CardScanSheet, { useCanScan } from "@/app/components/CardScanSheet";
-import { ChevronRightIcon, SearchIcon } from "@/app/components/Icons";
+import { CardsIcon, ChevronRightIcon, SearchIcon } from "@/app/components/Icons";
 
 export default function CollectionPage() {
   const router = useRouter();
@@ -250,7 +250,7 @@ export default function CollectionPage() {
         </div>
       ) : cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-          <span className="text-5xl" aria-hidden="true">🃏</span>
+          <CardsIcon className="w-12 h-12" />
           <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">Your collection is empty</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">Search or scan cards above to add them.</p>
         </div>

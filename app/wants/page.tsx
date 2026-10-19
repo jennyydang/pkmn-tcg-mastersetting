@@ -10,7 +10,7 @@ import { getCardsByIds } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import { VARIANT_LABELS, cardVariants, parseOwnedKey, variantPrice } from "@/lib/variants";
 import CardPriceModal from "@/app/components/CardPriceModal";
-import { ChevronRightIcon } from "@/app/components/Icons";
+import { CheckIcon, ChevronRightIcon, StarIcon } from "@/app/components/Icons";
 
 const fmt = (n: number) => n.toLocaleString(undefined, { style: "currency", currency: "USD" });
 
@@ -91,7 +91,7 @@ export default function WantsPage() {
         ) : (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {available
-              ? "Tap a card’s ⓘ button anywhere in the app and choose “Add to want list”. Set a target price and cards that drop to it are flagged here."
+              ? "Tap a card’s “i” button anywhere in the app and choose “Add to want list”. Set a target price and cards that drop to it are flagged here."
               : "The want list isn’t set up yet (run supabase/wants_and_copies.sql in Supabase)."}
           </p>
         )}
@@ -114,7 +114,7 @@ export default function WantsPage() {
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">#{card!.number} · {card!.set.name}</p>
                 <p className="text-xs mt-0.5">
                   {hit ? (
-                    <span className="font-semibold text-green-600 dark:text-green-400">✓ At or below your {fmt(target!)} target</span>
+                    <span className="inline-flex items-center gap-1 font-semibold text-green-600 dark:text-green-400"><CheckIcon className="w-3.5 h-3.5" />At or below your {fmt(target!)} target</span>
                   ) : target != null ? (
                     <span className="text-gray-500 dark:text-gray-400">Target {fmt(target)}</span>
                   ) : null}
@@ -123,7 +123,7 @@ export default function WantsPage() {
               <span className="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100 shrink-0">{price != null ? fmt(price) : "No price"}</span>
             </button>
             <button onClick={() => setWant(key, false)} aria-label={`Remove ${card!.name} from want list`}
-              className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-xl">★</button>
+              className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30"><StarIcon className="w-5 h-5" filled /></button>
           </li>
         ))}
       </ul>

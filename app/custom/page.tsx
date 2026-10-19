@@ -9,7 +9,7 @@ import CollectionEditSheet from "@/app/components/CollectionEditSheet";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import ProgressBar from "@/app/components/ProgressBar";
-import { ChevronRightIcon, SearchIcon } from "@/app/components/Icons";
+import { ChevronRightIcon, SearchIcon, TrophyIcon } from "@/app/components/Icons";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -156,7 +156,7 @@ function CustomSetView() {
         <ProgressBar owned={ownedCount} total={customCards.length} />
         {complete && (
           <div className="mt-3 inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
-            🏆 Custom Set Complete!
+            <TrophyIcon className="w-4 h-4" /> Custom Set Complete!
           </div>
         )}
       </div>

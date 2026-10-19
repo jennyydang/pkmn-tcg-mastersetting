@@ -4,6 +4,7 @@ import { PokemonCard } from "@/lib/types";
 import { useIncludeVariants } from "@/lib/prefs";
 import { variantProgress } from "@/lib/variants";
 import ProgressBar from "./ProgressBar";
+import { TrophyIcon } from "./Icons";
 
 interface Props {
   cards: PokemonCard[];
@@ -38,7 +39,7 @@ export default function MasterSetProgress({ cards, ownedKeys, completeLabel }: P
 
       {complete && cards.length > 0 && (
         <div className="inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
-          🏆 {completeLabel}
+          <TrophyIcon className="w-4 h-4" /> {completeLabel}
         </div>
       )}
 

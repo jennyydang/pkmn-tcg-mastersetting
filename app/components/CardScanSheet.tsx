@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback, useSyncExternalStore }
 import Image from "next/image";
 import { PokemonCard } from "@/lib/types";
 import { searchCards } from "@/lib/api";
-import { SearchIcon, XIcon } from "@/app/components/Icons";
+import { CheckIcon, SearchIcon, XIcon } from "@/app/components/Icons";
 
 declare global {
   interface Window {
@@ -259,7 +259,7 @@ export default function CardScanSheet({ onAdd, onClose, isInCollection }: Props)
                       disabled={inCol}
                       aria-label={inCol ? `${card.name} already in collection` : `Add ${card.name} to collection`}
                     >
-                      {inCol ? "Added ✓" : "+ Add"}
+                      {inCol ? <span className="inline-flex items-center gap-1">Added <CheckIcon className="w-3.5 h-3.5" /></span> : "+ Add"}
                     </button>
                   </div>
                 );

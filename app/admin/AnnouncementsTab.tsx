@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { MegaphoneIcon, WarningIcon } from "@/app/components/Icons";
 import { ErrorText, Spinner, cardClass, dangerButton, inputClass, primaryButton, secondaryButton, timeAgo } from "./ui";
 
 interface Announcement {
@@ -53,8 +54,8 @@ export default function AnnouncementsTab() {
           placeholder="e.g. Card prices are delayed today while our data provider recovers." className={`${inputClass} resize-y`} />
         <div className="flex flex-wrap items-center gap-2">
           <select value={level} onChange={(e) => setLevel(e.target.value as Announcement["level"])} aria-label="Style" className={`${inputClass} w-auto`}>
-            <option value="info">📣 Info (blue)</option>
-            <option value="warning">⚠️ Warning (amber)</option>
+            <option value="info">Info (blue)</option>
+            <option value="warning">Warning (amber)</option>
           </select>
           <button type="submit" disabled={busy || !message.trim()} className={primaryButton}>Post</button>
         </div>
@@ -66,7 +67,9 @@ export default function AnnouncementsTab() {
       {items?.map((a) => (
         <div key={a.id} className={`${cardClass} p-4 space-y-2 ${a.active ? "" : "opacity-60"}`}>
           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-            <span>{a.level === "warning" ? "⚠️ Warning" : "📣 Info"}</span>
+            <span className="inline-flex items-center gap-1">
+              {a.level === "warning" ? <><WarningIcon className="w-3.5 h-3.5 text-amber-500" />Warning</> : <><MegaphoneIcon className="w-3.5 h-3.5 text-blue-500" />Info</>}
+            </span>
             <span>· {timeAgo(a.created_at)}</span>
             <span className={`px-2 py-0.5 rounded-full font-semibold ${a.active ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" : "bg-gray-100 dark:bg-gray-700"}`}>
               {a.active ? "Showing" : "Off"}

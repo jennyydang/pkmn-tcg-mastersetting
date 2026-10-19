@@ -8,6 +8,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TrackedMasterSet } from "@/lib/types";
 import { useStore } from "@/lib/store";
+import { CardsIcon, TrophyIcon } from "./Icons";
 
 interface Props {
   tracked: TrackedMasterSet;
@@ -88,7 +89,7 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
             unoptimized
           />
         ) : (
-          <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 text-2xl">🃏</div>
+          <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 text-gray-400"><CardsIcon className="w-7 h-7" /></div>
         )}
         <div className="min-w-0">
           <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">{label}</h2>
@@ -111,7 +112,9 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
             />
           </div>
           {complete && (
-            <p className="mt-2 text-xs text-green-600 dark:text-green-400 font-semibold text-center">Master Set Complete! 🏆</p>
+            <p className="mt-2 flex items-center justify-center gap-1 text-xs text-green-600 dark:text-green-400 font-semibold">
+              <TrophyIcon className="w-4 h-4" /> Master Set Complete!
+            </p>
           )}
         </>
       ) : (

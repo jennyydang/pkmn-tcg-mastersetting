@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { XIcon } from "./Icons";
+import { MegaphoneIcon, WarningIcon, XIcon } from "./Icons";
 
 interface Announcement {
   id: string;
@@ -58,7 +58,7 @@ export default function AnnouncementBanner() {
           ? "border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
           : "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200"
       }`}>
-        <span aria-hidden="true">{warning ? "⚠️" : "📣"}</span>
+        {warning ? <WarningIcon className="w-5 h-5 shrink-0" /> : <MegaphoneIcon className="w-5 h-5 shrink-0" />}
         <p className="flex-1 whitespace-pre-line">{announcement.message}</p>
         <button onClick={dismiss} aria-label="Dismiss announcement" className="p-1 -m-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
           <XIcon className="w-4 h-4" />

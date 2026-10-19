@@ -6,6 +6,7 @@ import { VARIANT_LABELS } from "@/lib/variants";
 import Image from "next/image";
 import { useState } from "react";
 import CardPriceModal from "./CardPriceModal";
+import { CardsIcon } from "./Icons";
 
 /** One tappable card in the grid: a card, or one printed version of it. */
 export interface CardTile {
@@ -50,7 +51,7 @@ function CardItem({ tile, onToggle, onInfo }: CardItemProps) {
           />
         ) : (
           <div className="w-full aspect-[146/204] bg-gray-200 dark:bg-gray-700 flex flex-col items-center justify-center text-gray-600 dark:text-gray-400 text-xs p-2 rounded-lg">
-            <span className="text-2xl mb-1" aria-hidden="true">🃏</span>
+            <CardsIcon className="w-7 h-7 mb-1" />
             <span className="font-medium text-center leading-tight">{card.name}</span>
             <span>#{card.number}</span>
           </div>

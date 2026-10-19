@@ -16,6 +16,7 @@ import MasterSetCard from "./components/PokemonMasterSetCard";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import AuthModal from "./components/AuthModal";
+import { CardsIcon } from "./components/Icons";
 
 export default function Home() {
   const { trackedItems, reorderItems, addItem } = useStore();
@@ -121,7 +122,7 @@ export default function Home() {
 
       {trackedItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center text-gray-400 dark:text-gray-600">
-          <span className="text-6xl mb-4">🃏</span>
+          <CardsIcon className="w-14 h-14 mb-4" />
           <p className="text-lg font-medium mb-1">No master sets yet</p>
           <p className="text-sm">Search a Pokémon or set above to start tracking.</p>
         </div>

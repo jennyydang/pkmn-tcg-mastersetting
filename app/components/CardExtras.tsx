@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { CheckIcon, StarIcon } from "./Icons";
 import { CONDITIONS, Condition, CopyDetails, GRADE_COMPANIES, GradeCompany, useCardData } from "@/lib/cardData";
 
 const inputClass =
@@ -57,7 +58,7 @@ export function WantControls({ cardKey, cardName, marketPrice }: { cardKey: stri
         aria-pressed={wanted}
         className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200 min-h-[40px]"
       >
-        <span className="text-lg" aria-hidden="true">{wanted ? "★" : "☆"}</span>
+        <StarIcon className="w-5 h-5" filled={wanted} />
         {wanted ? "On your want list" : "Add to want list"}
       </button>
 
@@ -93,7 +94,7 @@ export function WantControls({ cardKey, cardName, marketPrice }: { cardKey: stri
             <p className="text-xs text-gray-500 dark:text-gray-400">Tap Set to save your target price.</p>
           ) : justSaved ? (
             <p className="flex items-start gap-1.5 text-sm font-medium text-green-700 dark:text-green-400" role="status">
-              <span aria-hidden="true">✓</span>
+              <CheckIcon className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{target != null ? `Target set. ${status}` : "Target removed. It’s still on your want list."}</span>
             </p>
           ) : status ? (

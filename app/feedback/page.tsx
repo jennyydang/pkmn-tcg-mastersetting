@@ -6,13 +6,14 @@ import Link from "next/link";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/lib/supabase";
 import { APP_VERSION } from "@/lib/appInfo";
+import { BugIcon, ChatIcon, LightBulbIcon } from "@/app/components/Icons";
 
 type Kind = "bug" | "idea" | "other";
 
-const KINDS: { value: Kind; label: string }[] = [
-  { value: "bug",   label: "🐞 Bug" },
-  { value: "idea",  label: "💡 Idea" },
-  { value: "other", label: "💬 Other" },
+const KINDS: { value: Kind; label: string; Icon: typeof BugIcon }[] = [
+  { value: "bug",   label: "Bug",   Icon: BugIcon },
+  { value: "idea",  label: "Idea",  Icon: LightBulbIcon },
+  { value: "other", label: "Other", Icon: ChatIcon },
 ];
 
 const MAX_MESSAGE = 5000;
@@ -100,7 +101,7 @@ function FeedbackForm() {
                       : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                   }`}
                 >
-                  {k.label}
+                  <span className="inline-flex items-center justify-center gap-1.5"><k.Icon className="w-4 h-4" />{k.label}</span>
                 </button>
               ))}
             </div>

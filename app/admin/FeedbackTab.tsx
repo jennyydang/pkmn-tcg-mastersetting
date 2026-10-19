@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { APP_NAME } from "@/lib/appInfo";
+import { BugIcon, ChatIcon, CheckCircleIcon, LightBulbIcon } from "@/app/components/Icons";
 import { ErrorText, Spinner, cardClass, dangerButton, inputClass, primaryButton, secondaryButton, timeAgo } from "./ui";
 
 type Status = "open" | "in_progress" | "resolved" | "wont_fix";
@@ -27,10 +28,10 @@ const STATUSES: { value: Status; label: string }[] = [
   { value: "wont_fix",    label: "Won’t fix" },
 ];
 
-const KIND_BADGE: Record<Feedback["kind"], string> = {
-  bug:   "🐞 Bug",
-  idea:  "💡 Idea",
-  other: "💬 Other",
+const KIND_BADGE: Record<Feedback["kind"], { label: string; Icon: typeof BugIcon }> = {
+  bug:   { label: "Bug",   Icon: BugIcon },
+  idea:  { label: "Idea",  Icon: LightBulbIcon },
+  other: { label: "Other", Icon: ChatIcon },
 };
 
 export default function FeedbackTab() {
@@ -79,7 +80,9 @@ export default function FeedbackTab() {
 
       {error && <ErrorText>Couldn’t load feedback: {error}</ErrorText>}
       {!items && !error && <Spinner />}
-      {items?.length === 0 && <p className="py-12 text-center text-gray-400">Nothing here 🎉</p>}
+      {items?.length === 0 && (
+        <p className="py-12 flex flex-col items-center gap-2 text-gray-400"><CheckCircleIcon className="w-8 h-8" />Nothing here</p>
+      )}
       {items?.map((f) => <FeedbackItem key={f.id} item={f} onChanged={load} />)}
     </div>
   );
@@ -122,7 +125,9 @@ function FeedbackItem({ item, onChanged }: { item: Feedback; onChanged: () => vo
   return (
     <article className={`${cardClass} p-5 space-y-3`}>
       <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-        <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 font-semibold text-gray-700 dark:text-gray-200">{KIND_BADGE[item.kind]}</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 font-semibold text-gray-700 dark:text-gray-200">
+          {(() => { const { Icon, label } = KIND_BADGE[item.kind]; return <><Icon className="w-3.5 h-3.5" />{label}</>; })()}
+        </span>
         <time dateTime={item.created_at} title={new Date(item.created_at).toLocaleString()}>{timeAgo(item.created_at)}</time>
         {item.page && <span>· from {item.page}</span>}
         {item.resolved_at && <span>· closed {timeAgo(item.resolved_at)}</span>}

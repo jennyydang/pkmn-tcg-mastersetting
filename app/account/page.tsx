@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { ThemePreference, useTheme } from "@/lib/theme";
-import { ChevronRightIcon } from "@/app/components/Icons";
+import { ChevronRightIcon, DevicePhoneIcon, MoonIcon, SunIcon } from "@/app/components/Icons";
 
 const inputClass =
   "w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -94,10 +94,10 @@ export default function AccountPage() {
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">Appearance</h2>
         <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Appearance">
           {([
-            { value: "light",  label: "Light",  icon: "☀️" },
-            { value: "dark",   label: "Dark",   icon: "🌙" },
-            { value: "system", label: "System", icon: "📱" },
-          ] as { value: ThemePreference; label: string; icon: string }[]).map((o) => (
+            { value: "light",  label: "Light",  Icon: SunIcon },
+            { value: "dark",   label: "Dark",   Icon: MoonIcon },
+            { value: "system", label: "System", Icon: DevicePhoneIcon },
+          ] as { value: ThemePreference; label: string; Icon: typeof SunIcon }[]).map((o) => (
             <button
               key={o.value}
               role="radio"
@@ -109,7 +109,7 @@ export default function AccountPage() {
                   : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               }`}
             >
-              <span className="text-lg" aria-hidden="true">{o.icon}</span>
+              <o.Icon className="w-6 h-6" />
               {o.label}
             </button>
           ))}
