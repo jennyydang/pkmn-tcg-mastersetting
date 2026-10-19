@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CardImage from "@/app/components/CardImage";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
-import { getCardsByIds, getCard, searchCards } from "@/lib/api";
-import { PokemonCard } from "@/lib/types";
+import { getCardsByIds, getCard, getCardsForArtist, getCardsForPokemon, getCardsForSet, searchCards } from "@/lib/api";
+import { PokemonCard, TrackedMasterSet } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
-import CollectionMasterSets from "@/app/components/CollectionMasterSets";
-import { ownedCardIds } from "@/lib/variants";
+import { ownedCardIds, parseOwnedKey } from "@/lib/variants";
 import { staggerStyle } from "@/lib/motion";
 import { CardsIcon, ChevronRightIcon, SearchIcon, SwapIcon, TrendingUpIcon } from "@/app/components/Icons";
 import { useCardData } from "@/lib/cardData";
@@ -22,7 +21,7 @@ import AddToSetsSheet from "@/app/components/AddToSetsSheet";
 export default function CollectionPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { collectionCardIds, addCollectionCard, removeCollectionCard, isInCollection, trackedItems } = useStore();
+  const { collectionCardIds, addCollectionCard, removeCollectionCard, isInCollection, trackedItems, toggleCard } = useStore();
   const { details } = useCardData();
   const extraCount = extrasFromDetails(details).reduce((n, e) => n + e.count, 0);
 
@@ -46,35 +45,62 @@ export default function CollectionPage() {
     if (!authLoading && !user) router.replace("/");
   }, [user, authLoading, router]);
 
-  // Load cards from API whenever collectionCardIds changes
+  // Every card you own, once: cards added here (in the order added), then cards
+  // checked off in master sets that aren't here yet.
+  const ownedIdsKey = useMemo(() => {
+    const ids = new Set(collectionCardIds);
+    for (const t of trackedItems) for (const id of ownedCardIds(t.ownedCards)) ids.add(id);
+    return [...ids].join("\n");
+  }, [collectionCardIds, trackedItems]);
+
+  // Cards loaded so far, so adding or removing one doesn't reload the rest.
+  const cardCache = useRef(new Map<string, PokemonCard>());
+
   useEffect(() => {
     if (authLoading || !user) return;
-    if (collectionCardIds.length === 0) {
-      setCards([]);
+    const ids = ownedIdsKey ? ownedIdsKey.split("\n") : [];
+    const show = () => setCards(ids.flatMap((id) => cardCache.current.get(id) ?? []));
+    const missing = ids.filter((id) => !cardCache.current.has(id));
+    if (missing.length === 0) {
+      show();
       setLoading(false);
       return;
     }
 
+    let cancelled = false;
     async function load() {
-      setLoading(true);
-      try {
-        const fetched = await getCardsByIds(collectionCardIds);
-        // Preserve insertion order (collectionCardIds order)
-        const byId = new Map<string, PokemonCard>();
-        for (const c of fetched) byId.set(c.id, c);
-        const ordered: PokemonCard[] = [];
-        for (const id of collectionCardIds) {
-          const c = byId.get(id);
-          if (c) ordered.push(c);
-        }
-        setCards(ordered);
-      } finally {
-        setLoading(false);
+      // Cards checked off in a set, Pokémon or artist master set come from one
+      // request for that master set's whole list; anything else (custom sets,
+      // cards added here) is fetched card by card.
+      const lists = new Map<string, TrackedMasterSet>();
+      const loose: string[] = [];
+      for (const id of missing) {
+        const item = trackedItems.find((t) => t.type !== "custom" && t.ownedCards.some((k) => parseOwnedKey(k).cardId === id));
+        if (item) lists.set(`${item.type}:${item.id}`, item);
+        else loose.push(id);
       }
+      const listFor = (t: TrackedMasterSet) =>
+        t.type === "set" ? getCardsForSet(t.id) : t.type === "pokemon" ? getCardsForPokemon(t.id) : getCardsForArtist(t.id);
+      const results = await Promise.allSettled([...[...lists.values()].map(listFor), getCardsByIds(loose)]);
+      if (cancelled) return;
+      const wanted = new Set(missing);
+      for (const r of results) {
+        if (r.status === "fulfilled") for (const c of r.value) if (wanted.has(c.id)) cardCache.current.set(c.id, c);
+      }
+      // A list that failed to load: fall back to its cards one by one.
+      const stillMissing = missing.filter((id) => !cardCache.current.has(id) && !loose.includes(id));
+      if (stillMissing.length) {
+        for (const c of await getCardsByIds(stillMissing).catch(() => [])) cardCache.current.set(c.id, c);
+        if (cancelled) return;
+      }
+      show();
+      setLoading(false);
     }
-
     load();
-  }, [user, authLoading, collectionCardIds]);
+    return () => { cancelled = true; };
+    // trackedItems is read for set membership only; ownedIdsKey covers what changes the grid.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading, ownedIdsKey]);
 
   // Debounced search
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -112,6 +138,7 @@ export default function CollectionPage() {
 
   function handleAddFromSearch(card: PokemonCard) {
     addCollectionCard(card.id);
+    cardCache.current.set(card.id, card);
     // Optimistically prepend to cards
     setCards((prev) => {
       if (prev.some((c) => c.id === card.id)) return prev;
@@ -124,7 +151,17 @@ export default function CollectionPage() {
     if (trackedItems.some((t) => setFitsCard(t, card))) setSetsFor({ card, intro: "Added to your collection" });
   }
 
+  // The grid shows every card you own, so removing a card also unchecks it in
+  // any master set that has it (after asking).
   function handleRemove(card: PokemonCard) {
+    const sets = setsHoldingCard(trackedItems, card.id);
+    if (sets.length > 0) {
+      const names = sets.map((t) => t.label).join(", ");
+      if (!confirm(`Remove ${card.name}? It will also be unchecked in ${sets.length === 1 ? "your master set" : `${sets.length} master sets`}: ${names}.`)) return;
+      for (const t of sets) {
+        for (const key of t.ownedCards.filter((k) => parseOwnedKey(k).cardId === card.id)) toggleCard(t.id, key);
+      }
+    }
     removeCollectionCard(card.id);
     setCards((prev) => prev.filter((c) => c.id !== card.id));
   }
@@ -146,10 +183,7 @@ export default function CollectionPage() {
     setPriceCard(null);
   }
 
-  // Everything owned, counted once: cards added here plus cards marked owned in master sets.
-  const setsWithCards = trackedItems.filter((t) => t.ownedCards.length > 0);
-  const allOwned = new Set(collectionCardIds);
-  for (const t of setsWithCards) for (const id of ownedCardIds(t.ownedCards)) allOwned.add(id);
+  const ownedCount = ownedIdsKey ? ownedIdsKey.split("\n").length : 0;
 
   if (authLoading || !user) {
     return (
@@ -172,12 +206,9 @@ export default function CollectionPage() {
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">My Collection</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          {allOwned.size === 0
+          {ownedCount === 0
             ? "No cards yet"
-            : `${allOwned.size} card${allOwned.size === 1 ? "" : "s"} owned`
-              + (setsWithCards.length > 0
-                ? ` · ${collectionCardIds.length} added here · across ${setsWithCards.length} master set${setsWithCards.length === 1 ? "" : "s"}`
-                : "")}
+            : `${ownedCount} card${ownedCount === 1 ? "" : "s"} owned, including everything checked off in your master sets`}
         </p>
       </div>
 
@@ -284,12 +315,8 @@ export default function CollectionPage() {
         </button>
       </form>
 
-      {setsWithCards.length > 0 && (
-        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">Added cards</h2>
-      )}
-
       {/* Card grid */}
-      {loading ? (
+      {loading && cards.length === 0 ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
           {Array.from({ length: 16 }).map((_, i) => (
             <div
@@ -299,13 +326,11 @@ export default function CollectionPage() {
             />
           ))}
         </div>
-      ) : cards.length === 0 && setsWithCards.length > 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">No cards added here yet. Search above to add cards that aren’t part of a master set.</p>
       ) : cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
           <CardsIcon className="w-12 h-12" />
           <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">Your collection is empty</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Search or scan cards above to add them.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Search for cards above, scan them, or check them off in a master set.</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
@@ -314,7 +339,7 @@ export default function CollectionPage() {
               {/* Remove button */}
               <button
                 onClick={() => handleRemove(card)}
-                aria-label={`Remove ${card.name} from collection`}
+                aria-label={`Remove ${card.name} (${card.set.name} #${card.number}) from collection`}
                 className="absolute top-1.5 right-1.5 z-10 w-6 h-6 bg-gray-800/70 dark:bg-gray-200/70 text-white dark:text-gray-900 rounded-full flex items-center justify-center shadow-md hover:bg-red-600 dark:hover:bg-red-500 dark:hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
               >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} aria-hidden="true">
@@ -325,7 +350,7 @@ export default function CollectionPage() {
               {/* Info ("i") button */}
               <button
                 onClick={() => handleInfo(card.id)}
-                aria-label={`View price for ${card.name}`}
+                aria-label={`View price for ${card.name} (${card.set.name} #${card.number})`}
                 className="absolute top-0 left-0 w-11 h-11 flex items-center justify-center transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
               >
                 <span className="w-5 h-5 bg-black/50 group-hover:bg-black/70 rounded-full flex items-center justify-center" aria-hidden="true">
@@ -347,7 +372,7 @@ export default function CollectionPage() {
                 return (
                   <button
                     onClick={() => setSetsFor({ card })}
-                    aria-label={`Add ${card.name} to sets${n ? `, in ${n} ${n === 1 ? "set" : "sets"}` : ""}`}
+                    aria-label={`Add ${card.name} (${card.set.name} #${card.number}) to sets${n ? `, in ${n} ${n === 1 ? "set" : "sets"}` : ""}`}
                     className={`mt-1 w-full min-h-[32px] rounded-lg text-[11px] font-semibold transition-colors ${n ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
                   >
                     {n ? `In ${n} ${n === 1 ? "set" : "sets"}` : "+ Add to sets"}
@@ -359,7 +384,6 @@ export default function CollectionPage() {
         </div>
       )}
 
-      <CollectionMasterSets items={trackedItems} />
 
       {setsFor && <AddToSetsSheet card={setsFor.card} intro={setsFor.intro} onClose={() => setSetsFor(null)} />}
 
