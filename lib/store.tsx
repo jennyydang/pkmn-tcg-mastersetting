@@ -7,6 +7,7 @@ import { useAuth } from "./auth";
 import { migrateToTcgdexIds } from "./migrateIds";
 import { WriteOp, flushQueue, isNetworkError, writeOrQueue } from "./syncQueue";
 import { isOnline } from "./online";
+import { useOnRefresh } from "./refresh";
 
 const STORAGE_KEY = "pkmn-tcg-mastersetting-v3";
 const COLLECTION_KEY = "pkmn-tcg-collection-v1";
@@ -48,6 +49,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [reloadToken, setReloadToken]             = useState(0);
   // Only write to Supabase after we've confirmed the full server-state for this user.
   const loadedForUser = useRef<string | null>(null);
+  // Pull-to-refresh waits on these; called when the next load finishes.
+  const loadWaiters = useRef<(() => void)[]>([]);
 
   // ── 1. Hydrate from localStorage immediately for a fast first paint ──────
   useEffect(() => {
@@ -174,8 +177,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       loadedForUser.current = userId!;
     }
 
-    loadFromSupabase();
+    loadFromSupabase().finally(() => loadWaiters.current.splice(0).forEach((done) => done()));
   }, [userId, authLoading, reloadToken]);
+
+  useOnRefresh(() => {
+    if (!userId) return;
+    const loaded = new Promise<void>((resolve) => loadWaiters.current.push(resolve));
+    setReloadToken((n) => n + 1);
+    return loaded;
+  });
 
   // Back online: sync queued changes, then reload so this device matches the server.
   useEffect(() => {

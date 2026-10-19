@@ -186,7 +186,8 @@ export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) 
             tabIndex={open ? 0 : -1}
             aria-hidden={!open}
             className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-1 bg-red-600 text-white text-xs font-semibold"
-            style={{ width: ACTION_WIDTH }}
+            // Hidden at rest so its red doesn't show through the rounded corners.
+            style={{ width: ACTION_WIDTH, visibility: offset < 0 ? "visible" : "hidden" }}
           >
             <TrashIcon className="w-6 h-6" />
             Remove

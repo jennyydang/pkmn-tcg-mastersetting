@@ -10,6 +10,7 @@ import BottomNav from "./components/BottomNav";
 import SyncErrorBanner from "./components/SyncErrorBanner";
 import AnnouncementBanner from "./components/AnnouncementBanner";
 import OfflineBanner from "./components/OfflineBanner";
+import PullToRefresh from "./components/PullToRefresh";
 import AppLogo from "./components/AppLogo";
 import Link from "next/link";
 import { APP_NAME } from "@/lib/appInfo";
@@ -54,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <AnnouncementBanner />
               <SyncErrorBanner />
               <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-[calc(2rem+env(safe-area-inset-bottom))]">
-                {children}
+                <PullToRefresh>{children}</PullToRefresh>
               </main>
               <BottomNav />
             </CardDataProvider>

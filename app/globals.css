@@ -101,6 +101,10 @@ body {
   .tile:not(.no-press):active { transform: scale(0.95); }
 }
 
+/* Pull-to-refresh is handled in-app (PullToRefresh.tsx): stop the browser's own
+   pull-to-reload and the top bounce that would fight it. */
+html { overscroll-behavior-y: none; }
+
 /* Swipe-to-remove rows: no iOS link preview / callout when a finger rests on them. */
 .swipe-row, .swipe-row a {
   -webkit-touch-callout: none;

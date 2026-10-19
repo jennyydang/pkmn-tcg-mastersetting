@@ -1,10 +1,11 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
 import { useAuth } from "./auth";
 import { useStore } from "./store";
 import { isNetworkError, writeOrQueue } from "./syncQueue";
+import { useOnRefresh } from "./refresh";
 
 // Want list and details about the copies you own (supabase/wants_and_copies.sql).
 // Both are keyed like owned_cards: "<card id>" or "<card id>|<variant>".
@@ -53,6 +54,7 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
   const [wants, setWants]         = useState<Map<string, number | null>>(new Map());
   const [details, setDetails]     = useState<Map<string, CopyDetails>>(new Map());
   const [reloadToken, setReloadToken] = useState(0);
+  const loadWaiters = useRef<(() => void)[]>([]);
 
   // Copy kept on this device so the want list and details work offline.
   const cacheKey = userId ? `pocketi-carddata:${userId}` : null;
@@ -105,9 +107,16 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
         purchasePrice: r.purchase_price == null ? null : Number(r.purchase_price),
       }])));
       setAvailable(true);
-    });
+    }).finally(() => loadWaiters.current.splice(0).forEach((done) => done()));
     return () => { cancelled = true; };
   }, [userId, reloadToken]);
+
+  useOnRefresh(() => {
+    if (!userId) return;
+    const loaded = new Promise<void>((resolve) => loadWaiters.current.push(resolve));
+    setReloadToken((n) => n + 1);
+    return loaded;
+  });
 
   const notReady = useCallback(() => {
     reportSyncError("Want list and card details aren't set up yet. Run supabase/wants_and_copies.sql in Supabase.");
