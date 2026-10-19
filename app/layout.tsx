@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
 import HeaderActions from "./components/HeaderActions";
 import SyncErrorBanner from "./components/SyncErrorBanner";
+import AnnouncementBanner from "./components/AnnouncementBanner";
 import { PokeBallIcon } from "./components/Icons";
 import Link from "next/link";
 
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <HeaderActions />
                 </div>
               </header>
+              <AnnouncementBanner />
               <SyncErrorBanner />
               <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))]">
                 {children}

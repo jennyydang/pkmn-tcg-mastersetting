@@ -131,6 +131,8 @@ export default function AuthModal() {
           <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
           {" · "}
           <Link href="/support" className="hover:underline">Support</Link>
+          {" · "}
+          <Link href="/feedback?from=/sign-in" className="hover:underline">Feedback</Link>
         </p>
       </div>
     </div>

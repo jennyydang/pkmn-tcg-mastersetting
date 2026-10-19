@@ -16,6 +16,8 @@ Run these in the Supabase SQL Editor if you haven't already:
 
 - `supabase/collection_cards.sql`: table behind My Collection.
 - `supabase/delete_my_account.sql`: in-app account deletion (Apple requires it for apps with sign-up).
+- `supabase/admin.sql`: anonymous feedback, announcements and the `/admin` dashboard. Then make
+  yourself an admin with the `INSERT INTO public.admins …` line at the top of that file.
 
 Under **Authentication → URL Configuration**, add `https://<your-site>/reset-password` to **Redirect URLs**.
 

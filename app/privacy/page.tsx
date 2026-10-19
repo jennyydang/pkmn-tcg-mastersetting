@@ -30,6 +30,13 @@ export default function PrivacyPage() {
         advertising, analytics or tracking.
       </p>
 
+      <h2>Feedback</h2>
+      <p>
+        When you send feedback, we store your message, the screen you sent it from and, if you choose, your app
+        version and device type and an email address for a reply. Feedback isn’t linked to your account. To have
+        feedback that includes your email deleted, contact us.
+      </p>
+
       <h2>Camera</h2>
       <p>
         On devices that support barcode scanning, the card scanner uses your camera. Images are processed on your

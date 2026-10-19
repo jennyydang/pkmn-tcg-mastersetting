@@ -7,6 +7,8 @@ import { supabase } from "./supabase";
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  /** UI hint only; supabase/admin.sql enforces admin access on the server. */
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<AuthError | null>;
   signUp: (email: string, password: string) => Promise<AuthError | null>;
   signOut: () => Promise<void>;
@@ -26,6 +28,7 @@ function siteUrl() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser]       = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Resolve existing session from localStorage before first render.
@@ -41,6 +44,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // False until supabase/admin.sql has been run (the function won't exist yet).
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    supabase.rpc("is_admin").then(({ data, error }) => {
+      if (!cancelled) setIsAdmin(!error && data === true);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -79,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resetPassword, updatePassword, deleteAccount }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin: !!userId && isAdmin, signIn, signUp, signOut, resetPassword, updatePassword, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

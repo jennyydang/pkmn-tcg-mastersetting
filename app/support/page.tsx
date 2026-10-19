@@ -35,6 +35,10 @@ export default function SupportPage() {
 
       <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Contact us</h2>
+        <p className="mb-2">
+          Found a bug or have an idea?{" "}
+          <Link href="/feedback?from=/support" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">Send anonymous feedback</Link>.
+        </p>
         {SUPPORT_EMAIL ? (
           <p>
             Email{" "}
