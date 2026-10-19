@@ -31,7 +31,9 @@ export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) 
   // Count cards, not versions: a card with several owned versions counts once.
   const owned = ownedCardIds(ownedCards).size;
   const pct = totalCards > 0 ? Math.round((owned / totalCards) * 100) : 0;
-  const complete = totalCards > 0 && owned >= totalCards;
+  // Custom sets: you mark them complete; until then the total isn't settled.
+  const ongoingCustom = type === "custom" && tracked.status !== "complete";
+  const complete = type === "custom" ? tracked.status === "complete" : totalCards > 0 && owned >= totalCards;
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -154,21 +156,23 @@ export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) 
         </div>
       </div>
 
-      {totalCards > 0 ? (
+      {totalCards > 0 || type === "custom" ? (
         <>
           <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mb-1.5">
-            <span>{owned} / {totalCards} cards</span>
-            <span className={complete ? "text-green-600 dark:text-green-400 font-semibold" : ""}>{pct}%</span>
+            <span className={ongoingCustom ? "text-gray-500 dark:text-gray-400" : ""}>{owned} / {ongoingCustom ? "?" : totalCards} cards</span>
+            {!ongoingCustom && <span className={complete ? "text-green-600 dark:text-green-400 font-semibold" : ""}>{pct}%</span>}
           </div>
-          <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
-            <div
-              className={`h-1.5 rounded-full transition-all duration-500 ${complete ? "bg-green-500" : "bg-blue-500"}`}
-              style={{ width: `${pct}%` }}
-            />
+          <div className={`w-full rounded-full h-1.5 overflow-hidden ${ongoingCustom ? "bg-gray-100/70 dark:bg-gray-700/60" : "bg-gray-100 dark:bg-gray-700"}`}>
+            {!ongoingCustom && (
+              <div
+                className={`h-1.5 rounded-full transition-all duration-500 ${complete ? "bg-green-500" : "bg-blue-500"}`}
+                style={{ width: `${pct}%` }}
+              />
+            )}
           </div>
           {complete && (
             <p className="mt-2 flex items-center justify-center gap-1 text-xs text-green-600 dark:text-green-400 font-semibold">
-              <TrophyIcon className="w-4 h-4" /> Master Set Complete!
+              <TrophyIcon className="w-4 h-4" /> {type === "custom" ? "Custom Set Complete!" : "Master Set Complete!"}
             </p>
           )}
         </>

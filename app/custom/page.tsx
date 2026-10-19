@@ -10,6 +10,7 @@ import { useStore } from "@/lib/store";
 import { useConfirm } from "@/lib/confirm";
 import { useAuth } from "@/lib/auth";
 import ProgressBar from "@/app/components/ProgressBar";
+import Confetti from "@/app/components/Confetti";
 import { CheckIcon, ChevronRightIcon, SearchIcon, TrophyIcon } from "@/app/components/Icons";
 import { successFeedback, tapFeedback } from "@/lib/haptics";
 import Image from "next/image";
@@ -42,6 +43,7 @@ function CustomSetView() {
 
   const [filter, setFilter]     = useState<"all" | "owned" | "missing">("all");
   const [isEditing, setIsEditing] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
   const [query, setQuery]       = useState("");
   const [searchResults, setSearchResults] = useState<PokemonCard[]>([]);
   const [searching, setSearching] = useState(false);
@@ -131,7 +133,9 @@ function CustomSetView() {
     </div>
   );
 
-  const complete = customCards.length > 0 && ownedCount >= customCards.length;
+  // You decide when a custom set is done (Status below), not the count.
+  const status = tracked.status ?? "ongoing";
+  const complete = status === "complete";
 
   return (
     <div>
@@ -141,6 +145,7 @@ function CustomSetView() {
         <span className="text-gray-900 dark:text-gray-100 font-medium truncate">{tracked.label}</span>
       </nav>
 
+      {celebrate && <Confetti onDone={() => setCelebrate(false)} />}
       {/* Header card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6 shadow-sm">
         <div className="flex items-start justify-between gap-2 mb-0.5">
@@ -156,7 +161,7 @@ function CustomSetView() {
           </button>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{tracked.subtitle ?? `Custom set · ${customCards.length} cards`}</p>
-        <ProgressBar owned={ownedCount} total={customCards.length} />
+        <ProgressBar owned={ownedCount} total={customCards.length} status={status} />
         {complete && (
           <div className="mt-3 inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
             <TrophyIcon className="w-4 h-4" /> Custom Set Complete!
@@ -168,10 +173,14 @@ function CustomSetView() {
           <span className="text-sm text-gray-600 dark:text-gray-300">Status</span>
           <div className="inline-flex p-1 rounded-full bg-gray-100 dark:bg-gray-900" role="radiogroup" aria-label="Status">
             {(["ongoing", "complete"] as const).map((s) => {
-              const on = (tracked.status ?? "ongoing") === s;
+              const on = status === s;
               return (
                 <button key={s} role="radio" aria-checked={on}
-                  onClick={() => { if (!on) { setStatus(id, s); if (s === "complete") successFeedback(); else tapFeedback(); } }}
+                  onClick={() => {
+                    if (on) return;
+                    setStatus(id, s);
+                    if (s === "complete") { successFeedback(); setCelebrate(true); } else tapFeedback();
+                  }}
                   className={`px-4 min-h-[36px] rounded-full text-sm font-semibold capitalize transition-colors ${on ? (s === "complete" ? "bg-green-600 text-white shadow-sm" : "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm") : "text-gray-500 dark:text-gray-400"}`}>
                   {s === "complete" && on && <CheckIcon className="w-4 h-4 inline -mt-0.5 mr-1" />}{s}
                 </button>
