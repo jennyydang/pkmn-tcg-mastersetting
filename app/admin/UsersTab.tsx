@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
+import { useConfirm } from "@/lib/confirm";
 import { ErrorText, Spinner, cardClass, dangerButton, inputClass, secondaryButton, timeAgo } from "./ui";
 
 interface AdminUser {
@@ -58,6 +59,7 @@ export default function UsersTab() {
 
 function UserRow({ user, isMe, onChanged }: { user: AdminUser; isMe: boolean; onChanged: () => void }) {
   const [busy, setBusy]           = useState(false);
+  const confirm = useConfirm();
   const [error, setError]         = useState<string | null>(null);
   const [deleting, setDeleting]   = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -104,7 +106,10 @@ function UserRow({ user, isMe, onChanged }: { user: AdminUser; isMe: boolean; on
             <button disabled={busy} onClick={() => call("admin_set_banned", { target: user.id, banned: !user.banned })} className={secondaryButton}>
               {user.banned ? "Unban" : "Ban"}
             </button>
-            <button disabled={busy} onClick={() => call("admin_set_admin", { target: user.id, make_admin: !user.is_admin })} className={secondaryButton}>
+            <button disabled={busy} onClick={async () => {
+              if (user.is_admin && !(await confirm({ title: `Remove admin access for ${user.email}?`, message: isMe ? "That’s you: you’ll lose access to this dashboard." : "They’ll lose access to this dashboard.", confirmLabel: "Remove admin" }))) return;
+              call("admin_set_admin", { target: user.id, make_admin: !user.is_admin });
+            }} className={secondaryButton}>
               {user.is_admin ? "Remove admin" : "Make admin"}
             </button>
             <button onClick={() => setDeleting(true)} className={dangerButton}>Delete</button>

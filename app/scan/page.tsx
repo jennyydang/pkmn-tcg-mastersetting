@@ -17,6 +17,7 @@ import CardImage from "@/app/components/CardImage";
 import { CheckIcon, StarIcon } from "@/app/components/Icons";
 import { CameraStep, PickStep } from "./ScanSteps";
 import BatchScan from "./BatchScan";
+import { useConfirm, wantRemovalPrompt } from "@/lib/confirm";
 import AddToSetsSheet, { addedIntro } from "@/app/components/AddToSetsSheet";
 import { useAddToCollection } from "@/lib/addCopies";
 import { setFitsCard, setsHoldingCard } from "@/lib/setMembership";
@@ -115,7 +116,8 @@ function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loadi
   const [setsOpen, setSetsOpen] = useState<{ intro?: string } | null>(null);
   const fitsSomeSet = trackedItems.some((t) => setFitsCard(t, card));
   const setCount = setsHoldingCard(trackedItems, card.id).length;
-  const { isWanted, setWant } = useCardData();
+  const { isWanted, setWant, wants } = useCardData();
+  const confirm = useConfirm();
   const versions = cardVariants(card);
   const [variant, setVariant] = useState(versions[0]);
   const market = variantPrice(card, variant);
@@ -175,7 +177,11 @@ function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loadi
           className="flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-green-600 text-white text-sm font-semibold transition-colors">
           {inCollection ? <><CheckIcon className="w-4 h-4" /> In collection</> : "Add to collection"}
         </button>
-        <button onClick={() => { setWant(wantKey, !isWanted(wantKey)); tapFeedback(); }}
+        <button onClick={async () => {
+          const wanted = isWanted(wantKey);
+          if (wanted && !(await confirm(wantRemovalPrompt(card.name, wants.get(wantKey))))) return;
+          setWant(wantKey, !wanted); tapFeedback();
+        }}
           className="flex items-center justify-center gap-2 min-h-[48px] rounded-xl border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-sm font-semibold">
           <StarIcon className="w-4 h-4" filled={isWanted(wantKey)} /> {isWanted(wantKey) ? "On want list" : "Want"}
         </button>

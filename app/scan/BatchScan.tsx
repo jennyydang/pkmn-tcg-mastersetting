@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getCard } from "@/lib/api";
 import { confidentMatch, findCandidates, readCard, ScanText } from "@/lib/cardScan";
 import { useAddCopies } from "@/lib/addCopies";
+import { useConfirm } from "@/lib/confirm";
 import { CardVariant, PokemonCard } from "@/lib/types";
 import { VARIANT_LABELS, cardVariants, variantPrice } from "@/lib/variants";
 import { successFeedback, tapFeedback } from "@/lib/haptics";
@@ -65,6 +66,7 @@ export default function BatchScan({ toggle }: { toggle: React.ReactNode }) {
   const [toast, setToast] = useState<{ text: string; ok: boolean; key: number } | null>(null);
   const [adding, setAdding] = useState(false);
   const addCopies = useAddCopies();
+  const confirm = useConfirm();
 
   useEffect(() => {
     try {
@@ -214,7 +216,7 @@ export default function BatchScan({ toggle }: { toggle: React.ReactNode }) {
                     )}
                   </>
                 )}
-                <button onClick={() => remove(item.id)} aria-label="Remove from list"
+                <button onClick={async () => { if (await confirm({ title: `Remove ${item.card?.name ?? "this scan"} from the list?`, message: item.count > 1 ? `All ${item.count} copies will be removed.` : undefined })) remove(item.id); }} aria-label="Remove from list"
                   className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                   <XIcon className="w-4 h-4" />
                 </button>
@@ -239,7 +241,7 @@ export default function BatchScan({ toggle }: { toggle: React.ReactNode }) {
               className="w-full min-h-[48px] rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
               {adding ? "Adding…" : `Add ${cardCount} ${cardCount === 1 ? "card" : "cards"} to collection`}
             </button>
-            <button onClick={() => { if (confirm("Clear every card from this list?")) setItems([]); }}
+            <button onClick={async () => { if (await confirm({ title: "Clear every card from this list?", message: "Scans you haven’t added to your collection will be lost.", confirmLabel: "Clear list" })) setItems([]); }}
               className="w-full text-xs text-gray-500 dark:text-gray-400 hover:underline">
               Clear list
             </button>

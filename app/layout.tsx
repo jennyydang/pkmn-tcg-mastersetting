@@ -5,6 +5,7 @@ import { StoreProvider } from "@/lib/store";
 import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
 import { CardDataProvider } from "@/lib/cardData";
+import { ConfirmProvider } from "@/lib/confirm";
 import HeaderActions from "./components/HeaderActions";
 import BottomNav from "./components/BottomNav";
 import SyncErrorBanner from "./components/SyncErrorBanner";
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className={`${geist.className} bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen`}>
         <ThemeProvider>
+          <ConfirmProvider>
           <AuthProvider>
             <StoreProvider>
             <CardDataProvider>
@@ -61,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </CardDataProvider>
             </StoreProvider>
           </AuthProvider>
+          </ConfirmProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -7,6 +7,7 @@ import { PokemonCard } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
 import CollectionEditSheet from "@/app/components/CollectionEditSheet";
 import { useStore } from "@/lib/store";
+import { useConfirm } from "@/lib/confirm";
 import { useAuth } from "@/lib/auth";
 import ProgressBar from "@/app/components/ProgressBar";
 import { ChevronRightIcon, SearchIcon, TrophyIcon } from "@/app/components/Icons";
@@ -36,6 +37,7 @@ function CustomSetView() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { trackedItems, isCardOwned, toggleCard, addCustomCard, removeCustomCard, removeItem, updateItem } = useStore();
+  const confirm = useConfirm();
 
   const [filter, setFilter]     = useState<"all" | "owned" | "missing">("all");
   const [isEditing, setIsEditing] = useState(false);
@@ -252,7 +254,11 @@ function CustomSetView() {
               <div key={card.id} className="relative">
                 {isEditing && (
                   <button
-                    onClick={() => removeCustomCard(id, card.id)}
+                    onClick={async () => {
+                      if (await confirm({ title: `Remove ${card.name} from ${tracked.label}?`, message: owned ? "It’s checked as owned here; that goes too. It stays in your collection." : undefined })) {
+                        removeCustomCard(id, card.id);
+                      }
+                    }}
                     aria-label={`Remove ${card.name} from set`}
                     className="absolute top-1.5 right-1.5 z-20 w-6 h-6 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-full flex items-center justify-center shadow-md hover:bg-red-600 dark:hover:bg-red-500 dark:hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   >

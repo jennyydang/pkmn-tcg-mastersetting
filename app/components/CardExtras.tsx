@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { CheckIcon, StarIcon } from "./Icons";
 import { CONDITIONS, Condition, CopyDetails, GRADE_COMPANIES, GradeCompany, useCardData } from "@/lib/cardData";
+import { useConfirm, wantRemovalPrompt } from "@/lib/confirm";
 
 const inputClass =
   "w-full px-3 py-2 min-h-[40px] rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -19,6 +20,7 @@ const fmtPrice = (n: number) => `$${n.toFixed(2)}`;
 export function WantControls({ cardKey, cardName, marketPrice }: { cardKey: string; cardName: string; marketPrice?: number }) {
   const { user } = useAuth();
   const { wants, isWanted, setWant } = useCardData();
+  const confirm = useConfirm();
   const wanted = isWanted(cardKey);
   const target = wants.get(cardKey) ?? null;
   const [targetText, setTargetText] = useState(target != null ? String(target) : "");
@@ -54,7 +56,10 @@ export function WantControls({ cardKey, cardName, marketPrice }: { cardKey: stri
   return (
     <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 px-4 py-3 space-y-2">
       <button
-        onClick={() => { setWant(cardKey, !wanted, wanted ? null : target); setJustSaved(false); setError(null); }}
+        onClick={async () => {
+          if (wanted && !(await confirm(wantRemovalPrompt(cardName, target)))) return;
+          setWant(cardKey, !wanted, wanted ? null : target); setJustSaved(false); setError(null);
+        }}
         aria-pressed={wanted}
         className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200 min-h-[40px]"
       >

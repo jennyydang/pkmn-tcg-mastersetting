@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useCardData } from "@/lib/cardData";
+import { useConfirm } from "@/lib/confirm";
 import { getCardsByIds } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import { parseOwnedKey } from "@/lib/variants";
@@ -20,6 +21,7 @@ export default function ExtrasPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { available, details, saveDetails } = useCardData();
+  const confirm = useConfirm();
   const [cards, setCards] = useState<Map<string, PokemonCard>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [sharing, setSharing] = useState<"link" | "image" | "text" | null>(null);
@@ -174,7 +176,10 @@ export default function ExtrasPage() {
                 </p>
               </div>
               <div className="flex items-center gap-1 shrink-0" role="group" aria-label={`Extra copies of ${row.card.name}`}>
-                <button onClick={() => setExtras(row.key, row.count - 1)} aria-label={row.count === 1 ? "Remove from extras (traded or kept)" : "One fewer"}
+                <button onClick={async () => {
+                  if (row.count === 1 && !(await confirm({ title: `Remove ${row.card.name} from your extras?`, message: "Your copy count goes back to one, the copy you keep. It stays in your collection." }))) return;
+                  setExtras(row.key, row.count - 1);
+                }} aria-label={row.count === 1 ? "Remove from extras (traded or kept)" : "One fewer"}
                   className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
                   <MinusIcon className="w-4 h-4" />
                 </button>

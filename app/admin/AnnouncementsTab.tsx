@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useConfirm } from "@/lib/confirm";
 import { MegaphoneIcon, WarningIcon } from "@/app/components/Icons";
 import { ErrorText, Spinner, cardClass, dangerButton, inputClass, primaryButton, secondaryButton, timeAgo } from "./ui";
 
@@ -15,6 +16,7 @@ interface Announcement {
 
 export default function AnnouncementsTab() {
   const [items, setItems]     = useState<Announcement[] | null>(null);
+  const confirm = useConfirm();
   const [message, setMessage] = useState("");
   const [level, setLevel]     = useState<Announcement["level"]>("info");
   const [busy, setBusy]       = useState(false);
@@ -80,7 +82,11 @@ export default function AnnouncementsTab() {
             <button disabled={busy} onClick={() => run(supabase.from("announcements").update({ active: !a.active }).eq("id", a.id))} className={secondaryButton}>
               {a.active ? "Turn off" : "Show again"}
             </button>
-            <button disabled={busy} onClick={() => run(supabase.from("announcements").delete().eq("id", a.id))} className={dangerButton}>Delete</button>
+            <button disabled={busy} onClick={async () => {
+              if (await confirm({ title: "Delete this announcement?", message: "It will be removed for everyone and can’t be restored.", confirmLabel: "Delete" })) {
+                run(supabase.from("announcements").delete().eq("id", a.id));
+              }
+            }} className={dangerButton}>Delete</button>
           </div>
         </div>
       ))}

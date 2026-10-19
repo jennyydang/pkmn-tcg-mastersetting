@@ -18,6 +18,7 @@ import { extrasFromDetails } from "@/lib/trade";
 import { setFitsCard, setsHoldingCard } from "@/lib/setMembership";
 import AddToSetsSheet, { addedIntro } from "@/app/components/AddToSetsSheet";
 import { useAddToCollection } from "@/lib/addCopies";
+import { useConfirm } from "@/lib/confirm";
 
 export default function CollectionPage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function CollectionPage() {
   const { collectionCardIds, removeCollectionCard, isInCollection, trackedItems, toggleCard } = useStore();
   const { details } = useCardData();
   const addToCollection = useAddToCollection();
+  const confirm = useConfirm();
   const extraCount = extrasFromDetails(details).reduce((n, e) => n + e.count, 0);
 
   const [cards, setCards]               = useState<PokemonCard[]>([]);
@@ -158,11 +160,16 @@ export default function CollectionPage() {
 
   // The grid shows every card you own, so removing a card also unchecks it in
   // any master set that has it (after asking).
-  function handleRemove(card: PokemonCard) {
+  async function handleRemove(card: PokemonCard) {
     const sets = setsHoldingCard(trackedItems, card.id);
+    const ok = await confirm({
+      title: `Remove ${card.name} from your collection?`,
+      message: sets.length > 0
+        ? `It will also be unchecked in ${sets.length === 1 ? "your master set" : `${sets.length} master sets`}: ${sets.map((t) => t.label).join(", ")}.`
+        : `${card.set.name} #${card.number}`,
+    });
+    if (!ok) return;
     if (sets.length > 0) {
-      const names = sets.map((t) => t.label).join(", ");
-      if (!confirm(`Remove ${card.name}? It will also be unchecked in ${sets.length === 1 ? "your master set" : `${sets.length} master sets`}: ${names}.`)) return;
       for (const t of sets) {
         for (const key of t.ownedCards.filter((k) => parseOwnedKey(k).cardId === card.id)) toggleCard(t.id, key);
       }

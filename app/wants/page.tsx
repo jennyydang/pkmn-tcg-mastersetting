@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { staggerStyle } from "@/lib/motion";
 import { useCardData } from "@/lib/cardData";
+import { useConfirm, wantRemovalPrompt } from "@/lib/confirm";
 import { getCardsByIds } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import { VARIANT_LABELS, cardVariants, parseOwnedKey, variantPrice } from "@/lib/variants";
@@ -19,6 +20,7 @@ export default function WantsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { available, wants, setWant } = useCardData();
+  const confirm = useConfirm();
   const [cards, setCards]     = useState<Map<string, PokemonCard>>(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
@@ -123,7 +125,7 @@ export default function WantsPage() {
               </div>
               <span className="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100 shrink-0">{price != null ? fmt(price) : "No price"}</span>
             </button>
-            <button onClick={() => setWant(key, false)} aria-label={`Remove ${card!.name} from want list`}
+            <button onClick={async () => { if (await confirm(wantRemovalPrompt(card!.name, target))) setWant(key, false); }} aria-label={`Remove ${card!.name} from want list`}
               className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30"><StarIcon className="w-5 h-5" filled /></button>
           </li>
         ))}
