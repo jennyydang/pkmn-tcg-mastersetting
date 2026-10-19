@@ -1,7 +1,7 @@
 "use client";
 
 import { PokemonCard } from "@/lib/types";
-import Image from "next/image";
+import CardImage from "./CardImage";
 import { useEffect, useState } from "react";
 import { CopyDetailsForm, WantControls } from "./CardExtras";
 import { parseOwnedKey, variantPrice } from "@/lib/variants";
@@ -65,13 +65,12 @@ export default function CardPriceModal({ card, loading, onClose, cardKey, owned 
           {/* Card header row */}
           <div className="flex items-center gap-4 py-4 border-b border-gray-100 dark:border-gray-800">
             {card ? (
-              <Image
+              <CardImage
                 src={card.images.small}
                 alt={card.name}
                 width={56}
                 height={78}
                 className="rounded shadow-sm shrink-0"
-                unoptimized
               />
             ) : (
               <div className="w-14 h-[78px] rounded bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0" aria-hidden="true" />

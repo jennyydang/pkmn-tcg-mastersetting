@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
+import CardImage from "./CardImage";
 import { getCardsByIds } from "@/lib/api";
 import { useCardView, useIncludeVariants } from "@/lib/prefs";
 import { CardVariant, PokemonCard } from "@/lib/types";
@@ -10,6 +10,7 @@ import CardGrid, { CardTile } from "./CardGrid";
 import { staggerStyle } from "@/lib/motion";
 import BinderView from "./BinderView";
 import QuickAdd from "./QuickAdd";
+import SaveOffline from "./SaveOffline";
 
 interface Props {
   cards: PokemonCard[];
@@ -19,6 +20,8 @@ interface Props {
   showSetNames?: boolean;
   /** Offer Quick add by card number (set pages only; numbers repeat across sets). */
   quickAdd?: boolean;
+  /** Identifies this page for "Save for offline" (e.g. "set:sv03.5"). */
+  offlineKey: string;
 }
 
 type Filter = "all" | "owned" | "missing";
@@ -30,7 +33,7 @@ interface MissingEntry {
 }
 
 // Filters, What's left and the card grid for a set, Pokémon or artist page.
-export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetNames = false, quickAdd = false }: Props) {
+export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetNames = false, quickAdd = false, offlineKey }: Props) {
   const [includeVariants] = useIncludeVariants();
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useCardView();
@@ -65,6 +68,8 @@ export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetName
 
   return (
     <>
+      <SaveOffline saveKey={offlineKey} cards={cards} />
+
       {quickAdd && <QuickAdd cards={cards} owned={owned} onToggle={onToggle} />}
 
       <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -210,7 +215,7 @@ function WhatsLeft({ entries, includeVariants, showSetNames }: { entries: Missin
               <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                 {visible.map(({ card, variant, price }, i) => (
                   <li key={`${card.id}|${variant ?? "any"}`} style={staggerStyle(i)} className="stagger-in flex items-center gap-3 py-2">
-                    <Image src={card.images.small} alt="" width={32} height={45} className="rounded shrink-0" unoptimized />
+                    <CardImage src={card.images.small} alt="" width={32} height={45} className="rounded shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{card.name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">

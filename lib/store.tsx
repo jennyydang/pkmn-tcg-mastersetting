@@ -5,6 +5,8 @@ import { CustomCardDef, TrackedMasterSet } from "./types";
 import { supabase } from "./supabase";
 import { useAuth } from "./auth";
 import { migrateToTcgdexIds } from "./migrateIds";
+import { WriteOp, flushQueue, isNetworkError, writeOrQueue } from "./syncQueue";
+import { isOnline } from "./online";
 
 const STORAGE_KEY = "pkmn-tcg-mastersetting-v3";
 const COLLECTION_KEY = "pkmn-tcg-collection-v1";
@@ -42,6 +44,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [collectionCardIds, setCollectionCardIds] = useState<string[]>([]);
   const [hydrated, setHydrated]                   = useState(false);
   const [syncError, setSyncError]                 = useState<string | null>(null);
+  // Bumped to reload from Supabase (e.g. when the connection comes back).
+  const [reloadToken, setReloadToken]             = useState(0);
   // Only write to Supabase after we've confirmed the full server-state for this user.
   const loadedForUser = useRef<string | null>(null);
 
@@ -68,11 +72,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setCollectionCardIds([]);
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(COLLECTION_KEY);
+      // Want list / copy details kept for offline use (lib/cardData.tsx). Queued
+      // unsynced changes stay, and are sent when that user signs back in.
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("pocketi-carddata:")) localStorage.removeItem(key);
+      }
       loadedForUser.current = null;
       return;
     }
 
     async function loadFromSupabase() {
+      // Send changes made offline first, so what we load includes them.
+      if (isOnline()) {
+        const rejected = await flushQueue(userId!);
+        if (rejected.length) reportWriteError("queued saves", rejected[0]);
+      }
+
       const [
         { data: sets, error: setsErr },
         { data: cards, error: cardsErr },
@@ -99,12 +114,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ]);
 
       if (setsErr || cardsErr || customErr) {
-        console.error("Supabase load error", setsErr ?? cardsErr ?? customErr);
+        const err = setsErr ?? cardsErr ?? customErr;
+        // Offline: keep the copy saved on this device and let changes queue; the
+        // "online" listener below reloads once the connection is back.
+        if (isNetworkError(err)) {
+          loadedForUser.current = userId!;
+          return;
+        }
+        console.error("Supabase load error", err);
         setSyncError("Couldn't load your saved data, so changes won't be saved. Refresh to try again.");
         return;
       }
       // My Collection lives in its own table; if it can't load, keep the rest working.
-      if (colErr) {
+      if (colErr && !isNetworkError(colErr)) {
         console.error("Supabase load error (collection_cards)", colErr);
         setSyncError(`Couldn't load My Collection (${colErr.message}). Your master sets are unaffected.`);
       }
@@ -153,7 +175,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
 
     loadFromSupabase();
-  }, [userId, authLoading]);
+  }, [userId, authLoading, reloadToken]);
+
+  // Back online: sync queued changes, then reload so this device matches the server.
+  useEffect(() => {
+    if (!userId) return;
+    const onOnline = () => setReloadToken((n) => n + 1);
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [userId]);
 
   // ── 3. Keep trackedItems in localStorage in sync ─────────────────────────
   useEffect(() => {
@@ -179,26 +209,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return !!uid && loadedForUser.current === uid;
   }
 
+  // Save a change, or queue it to sync later when offline (lib/syncQueue.ts).
+  function persist(label: string, op: WriteOp) {
+    const uid = user?.id;
+    if (!canWrite(uid)) return;
+    writeOrQueue(uid, label, op).then((error) => { if (error) reportWriteError(label, error); });
+  }
+
   // ── Mutations (optimistic local-first, Supabase in background) ───────────
 
   function addItem(item: TrackedMasterSet) {
     setTrackedItems((prev) => {
       if (prev.some((t) => t.id === item.id)) return prev;
       const next = [...prev, item];
-      if (canWrite(user?.id)) {
-        supabase
-          .from("tracked_master_sets")
-          .upsert({
-            user_id:     user!.id,
-            item_id:     item.id,
-            type:        item.type,
-            label:       item.label,
-            image:       item.image,
-            total_cards: item.totalCards,
-            subtitle:    item.subtitle ?? null,
-            sort_order:  next.length - 1,
-          }, { onConflict: "user_id,item_id" })
-          .then(({ error }) => { if (error) reportWriteError("addItem", error); });
+      if (user) {
+        persist("addItem", { kind: "upsert", table: "tracked_master_sets", onConflict: "user_id,item_id", rows: {
+          user_id:     user.id,
+          item_id:     item.id,
+          type:        item.type,
+          label:       item.label,
+          image:       item.image,
+          total_cards: item.totalCards,
+          subtitle:    item.subtitle ?? null,
+          sort_order:  next.length - 1,
+        } });
       }
       return next;
     });
@@ -207,16 +241,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   function removeItem(id: string) {
     setTrackedItems((prev) => {
       const next = prev.filter((t) => t.id !== id);
-      if (canWrite(user?.id)) {
-        Promise.all([
-          supabase.from("owned_cards").delete().eq("user_id", user!.id).eq("item_id", id),
-          supabase.from("custom_set_cards").delete().eq("user_id", user!.id).eq("item_id", id),
-          supabase.from("tracked_master_sets").delete().eq("user_id", user!.id).eq("item_id", id),
-        ]).then(([{ error: e1 }, { error: e2 }, { error: e3 }]) => {
-          if (e1) reportWriteError("removeItem owned_cards", e1);
-          if (e2) reportWriteError("removeItem custom_set_cards", e2);
-          if (e3) reportWriteError("removeItem tracked_master_sets", e3);
-        });
+      if (user) {
+        for (const table of ["owned_cards", "custom_set_cards", "tracked_master_sets"]) {
+          persist(`removeItem ${table}`, { kind: "delete", table, match: { user_id: user.id, item_id: id } });
+        }
       }
       return next;
     });
@@ -231,23 +259,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           ? t.ownedCards.filter((c) => c !== cardId)
           : [...t.ownedCards, cardId];
 
-        if (canWrite(user?.id)) {
+        if (user) {
           if (!wasOwned) {
-            supabase
-              .from("owned_cards")
-              .upsert(
-                { user_id: user!.id, item_id: id, card_id: cardId },
-                { onConflict: "user_id,item_id,card_id", ignoreDuplicates: true }
-              )
-              .then(({ error }) => { if (error) reportWriteError("toggleCard insert", error); });
+            persist("toggleCard insert", { kind: "upsert", table: "owned_cards", onConflict: "user_id,item_id,card_id", ignoreDuplicates: true,
+              rows: { user_id: user.id, item_id: id, card_id: cardId } });
           } else {
-            supabase
-              .from("owned_cards")
-              .delete()
-              .eq("user_id", user!.id)
-              .eq("item_id", id)
-              .eq("card_id", cardId)
-              .then(({ error }) => { if (error) reportWriteError("toggleCard delete", error); });
+            persist("toggleCard delete", { kind: "delete", table: "owned_cards", match: { user_id: user.id, item_id: id, card_id: cardId } });
           }
         }
 
@@ -268,13 +285,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setTrackedItems((prev) =>
       prev.map((t) => {
         if (t.id !== id || t.totalCards === total) return t;
-        if (canWrite(user?.id)) {
-          supabase
-            .from("tracked_master_sets")
-            .update({ total_cards: total })
-            .eq("user_id", user!.id)
-            .eq("item_id", id)
-            .then(({ error }) => { if (error) reportWriteError("updateTotal", error); });
+        if (user) {
+          persist("updateTotal", { kind: "update", table: "tracked_master_sets", values: { total_cards: total }, match: { user_id: user.id, item_id: id } });
         }
         return { ...t, totalCards: total };
       })
@@ -290,9 +302,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const [item] = next.splice(from, 1);
       next.splice(to, 0, item);
 
-      if (canWrite(user?.id)) {
+      if (user) {
         const rows = next.map((t, index) => ({
-          user_id:     user!.id,
+          user_id:     user.id,
           item_id:     t.id,
           type:        t.type,
           label:       t.label,
@@ -301,10 +313,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           subtitle:    t.subtitle ?? null,
           sort_order:  index,
         }));
-        supabase
-          .from("tracked_master_sets")
-          .upsert(rows, { onConflict: "user_id,item_id" })
-          .then(({ error }) => { if (error) reportWriteError("reorderItems", error); });
+        persist("reorderItems", { kind: "upsert", table: "tracked_master_sets", onConflict: "user_id,item_id", rows });
       }
 
       return next;
@@ -319,14 +328,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const customCards = [...(t.customCards ?? []), card];
         const totalCards  = customCards.length;
         const image       = t.image || card.imageSmall;
-        if (canWrite(user?.id)) {
-          supabase.from("custom_set_cards")
-            .upsert({ user_id: user!.id, item_id: itemId, card_id: card.id, card_name: card.name, card_image_small: card.imageSmall, card_set_name: card.setName }, { onConflict: "user_id,item_id,card_id", ignoreDuplicates: true })
-            .then(({ error }) => { if (error) reportWriteError("addCustomCard", error); });
-          supabase.from("tracked_master_sets")
-            .update({ total_cards: totalCards, image })
-            .eq("user_id", user!.id).eq("item_id", itemId)
-            .then(({ error }) => { if (error) reportWriteError("addCustomCard updateSet", error); });
+        if (user) {
+          persist("addCustomCard", { kind: "upsert", table: "custom_set_cards", onConflict: "user_id,item_id,card_id", ignoreDuplicates: true,
+            rows: { user_id: user.id, item_id: itemId, card_id: card.id, card_name: card.name, card_image_small: card.imageSmall, card_set_name: card.setName } });
+          persist("addCustomCard updateSet", { kind: "update", table: "tracked_master_sets", values: { total_cards: totalCards, image }, match: { user_id: user.id, item_id: itemId } });
         }
         return { ...t, customCards, totalCards, image };
       })
@@ -339,14 +344,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (t.id !== itemId || t.type !== "custom") return t;
         const customCards = (t.customCards ?? []).filter((c) => c.id !== cardId);
         const totalCards  = customCards.length;
-        if (canWrite(user?.id)) {
-          supabase.from("custom_set_cards")
-            .delete().eq("user_id", user!.id).eq("item_id", itemId).eq("card_id", cardId)
-            .then(({ error }) => { if (error) reportWriteError("removeCustomCard", error); });
-          supabase.from("tracked_master_sets")
-            .update({ total_cards: totalCards })
-            .eq("user_id", user!.id).eq("item_id", itemId)
-            .then(({ error }) => { if (error) reportWriteError("removeCustomCard updateSet", error); });
+        if (user) {
+          persist("removeCustomCard", { kind: "delete", table: "custom_set_cards", match: { user_id: user.id, item_id: itemId, card_id: cardId } });
+          persist("removeCustomCard updateSet", { kind: "update", table: "tracked_master_sets", values: { total_cards: totalCards }, match: { user_id: user.id, item_id: itemId } });
         }
         return { ...t, customCards, totalCards };
       })
@@ -358,13 +358,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((t) => {
         if (t.id !== id) return t;
         const next = { ...t, ...updates };
-        if (canWrite(user?.id)) {
-          supabase
-            .from("tracked_master_sets")
-            .update({ label: next.label, subtitle: next.subtitle ?? null })
-            .eq("user_id", user!.id)
-            .eq("item_id", id)
-            .then(({ error }) => { if (error) reportWriteError("updateItem", error); });
+        if (user) {
+          persist("updateItem", { kind: "update", table: "tracked_master_sets", values: { label: next.label, subtitle: next.subtitle ?? null }, match: { user_id: user.id, item_id: id } });
         }
         return next;
       })
@@ -375,14 +370,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setCollectionCardIds((prev) => {
       if (prev.includes(cardId)) return prev;
       const next = [...prev, cardId];
-      if (canWrite(user?.id)) {
-        supabase
-          .from("collection_cards")
-          .upsert(
-            { user_id: user!.id, card_id: cardId },
-            { onConflict: "user_id,card_id", ignoreDuplicates: true }
-          )
-          .then(({ error }) => { if (error) reportWriteError("addCollectionCard", error); });
+      if (user) {
+        persist("addCollectionCard", { kind: "upsert", table: "collection_cards", onConflict: "user_id,card_id", ignoreDuplicates: true,
+          rows: { user_id: user.id, card_id: cardId } });
       }
       return next;
     });
@@ -391,13 +381,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   function removeCollectionCard(cardId: string) {
     setCollectionCardIds((prev) => {
       const next = prev.filter((id) => id !== cardId);
-      if (canWrite(user?.id)) {
-        supabase
-          .from("collection_cards")
-          .delete()
-          .eq("user_id", user!.id)
-          .eq("card_id", cardId)
-          .then(({ error }) => { if (error) reportWriteError("removeCollectionCard", error); });
+      if (user) {
+        persist("removeCollectionCard", { kind: "delete", table: "collection_cards", match: { user_id: user.id, card_id: cardId } });
       }
       return next;
     });

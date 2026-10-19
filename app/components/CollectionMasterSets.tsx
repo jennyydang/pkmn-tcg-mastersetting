@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CardImage from "./CardImage";
 import Link from "next/link";
 import Image from "next/image";
 import { getCardsByIds } from "@/lib/api";
@@ -130,7 +131,7 @@ function MasterSetSection({ item, index }: { item: TrackedMasterSet; index: numb
                         {...tiltHandlers}
                     className="tile relative block w-full rounded-lg overflow-hidden shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                       >
-                        <Image src={card.images.small} alt={card.name} width={146} height={204} className="w-full h-auto block" unoptimized />
+                        <CardImage src={card.images.small} alt={card.name} width={146} height={204} className="w-full h-auto block" />
                         {label && (
                           <span className="absolute bottom-1 inset-x-1 rounded-md px-1 py-0.5 text-center text-[10px] font-bold leading-tight text-white bg-black/60">
                             {label}

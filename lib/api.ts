@@ -1,6 +1,8 @@
 import { CardVariant, PokemonCard, PokemonSet, TCGPlayerPrice } from "./types";
 import { legacyImageUrl } from "./legacyIds";
 import { VARIANT_ORDER } from "./variants";
+import { networkFirst } from "./offlineCache";
+import { isOnline } from "./online";
 
 // Card data comes from TCGdex (https://tcgdex.dev). GraphQL is used for searches and
 // card lists (one request returns each card's set); REST is used for single cards
@@ -20,11 +22,13 @@ const MAX_ATTEMPTS = 4;
 // Other errors (e.g. a 404 for an unknown card) fail at once.
 async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
   for (let attempt = 1; ; attempt++) {
+    // Offline: fail at once so callers fall back to saved data without waiting out retries.
+    if (!isOnline()) throw new Error("Offline");
     let res: Response;
     try {
       res = await fetch(url, init);
     } catch (e) {
-      if (attempt >= MAX_ATTEMPTS) throw e;
+      if (attempt >= MAX_ATTEMPTS || !isOnline()) throw e;
       await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
       continue;
     }
@@ -36,25 +40,31 @@ async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response
 }
 
 export class ApiError extends Error {
-  constructor(public status: number) {
-    super(`API error: ${status}`);
+  constructor(public status: number, detail?: string) {
+    super(`API error: ${detail ?? status}`);
   }
 }
 
+// A saved copy stands in for connection and server problems, not for answers
+// like 404 that the API gave deliberately.
+const isConnectionProblem = (e: unknown) => !(e instanceof ApiError && e.status < 500 && e.status !== 429);
+
 async function restFetch<T>(path: string): Promise<T> {
-  const res = await fetchWithRetry(`${REST_URL}${path}`);
-  return res.json();
+  return networkFirst(`rest:${path}`, async () => (await fetchWithRetry(`${REST_URL}${path}`)).json(), isConnectionProblem);
 }
 
 async function gql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
-  const res = await fetchWithRetry(GRAPHQL_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, variables }),
-  });
-  const body = await res.json();
-  if (body.errors?.length) throw new Error(`API error: ${body.errors[0].message}`);
-  return body.data;
+  const body = JSON.stringify({ query, variables });
+  return networkFirst(`gql:${body}`, async () => {
+    const res = await fetchWithRetry(GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+    const json = await res.json();
+    if (json.errors?.length) throw new ApiError(400, json.errors[0].message);
+    return json.data as T;
+  }, isConnectionProblem);
 }
 
 // ── Raw TCGdex shapes ───────────────────────────────────────────────────────

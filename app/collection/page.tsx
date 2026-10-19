@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import CardImage from "@/app/components/CardImage";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,8 +13,7 @@ import CardPriceModal from "@/app/components/CardPriceModal";
 import CollectionMasterSets from "@/app/components/CollectionMasterSets";
 import { ownedCardIds } from "@/lib/variants";
 import { staggerStyle } from "@/lib/motion";
-import CardScanSheet, { useCanScan } from "@/app/components/CardScanSheet";
-import { CardsIcon, ChevronRightIcon, SearchIcon } from "@/app/components/Icons";
+import { CameraIcon, CardsIcon, ChevronRightIcon, SearchIcon, TrendingUpIcon } from "@/app/components/Icons";
 
 export default function CollectionPage() {
   const router = useRouter();
@@ -27,8 +27,6 @@ export default function CollectionPage() {
   const [priceOpen, setPriceOpen]       = useState(false);
   const [priceLoading, setPriceLoading] = useState(false);
 
-  const [scanOpen, setScanOpen]         = useState(false);
-  const canScan = useCanScan();
 
   const [query, setQuery]               = useState("");
   const [searchResults, setSearchResults] = useState<PokemonCard[]>([]);
@@ -129,14 +127,6 @@ export default function CollectionPage() {
     setPriceCard(null);
   }
 
-  function handleScanAdd(card: PokemonCard) {
-    addCollectionCard(card.id);
-    setCards((prev) => {
-      if (prev.some((c) => c.id === card.id)) return prev;
-      return [card, ...prev];
-    });
-  }
-
   // Everything owned, counted once: cards added here plus cards marked owned in master sets.
   const setsWithCards = trackedItems.filter((t) => t.ownedCards.length > 0);
   const allOwned = new Set(collectionCardIds);
@@ -171,6 +161,20 @@ export default function CollectionPage() {
                 : "")}
         </p>
       </div>
+
+      {/* Portfolio lives under Collection in the phone tab bar. */}
+      <Link href="/portfolio" className="tile flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 px-5 py-4 mb-6 shadow-sm">
+        <span className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <TrendingUpIcon className="w-5 h-5" />
+          </span>
+          <span>
+            <span className="block font-semibold text-gray-900 dark:text-gray-100">Portfolio</span>
+            <span className="block text-xs text-gray-500 dark:text-gray-400">Collection value, profit/loss and history</span>
+          </span>
+        </span>
+        <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+      </Link>
 
       {/* Add row: search + scan */}
       <div className="flex gap-2 mb-6">
@@ -235,17 +239,15 @@ export default function CollectionPage() {
           )}
         </div>
 
-        {/* Scan button (hidden where barcode scanning isn't supported, e.g. iOS) */}
-        {canScan && <button
-          onClick={() => setScanOpen(true)}
+        {/* Opens the camera card scanner (also the middle button of the phone tab bar). */}
+        <Link
+          href="/scan"
           aria-label="Scan a card"
           className="shrink-0 flex items-center gap-2 px-4 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9V6a1 1 0 011-1h3M3 15v3a1 1 0 001 1h3m11-4v3a1 1 0 01-1 1h-3m4-12h-3a1 1 0 00-1 1v3" />
-          </svg>
+          <CameraIcon className="w-4 h-4" />
           Scan
-        </button>}
+        </Link>
       </div>
 
       {setsWithCards.length > 0 && (
@@ -298,13 +300,12 @@ export default function CollectionPage() {
               </button>
 
               {/* Card image */}
-              <Image
+              <CardImage
                 src={card.images.small}
                 alt={card.name}
                 width={146}
                 height={204}
                 className="w-full h-auto block rounded-lg shadow-sm"
-                unoptimized
               />
             </div>
           ))}
@@ -318,14 +319,6 @@ export default function CollectionPage() {
         <CardPriceModal card={priceCard} loading={priceLoading} onClose={closePriceModal} owned={!!priceCard && isInCollection(priceCard.id)} />
       )}
 
-      {/* Scan sheet */}
-      {scanOpen && (
-        <CardScanSheet
-          onAdd={handleScanAdd}
-          onClose={() => setScanOpen(false)}
-          isInCollection={isInCollection}
-        />
-      )}
     </div>
   );
 }

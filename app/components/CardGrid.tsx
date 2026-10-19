@@ -1,9 +1,9 @@
 "use client";
 
 import { getCard } from "@/lib/api";
+import CardImage from "./CardImage";
 import { CardVariant, PokemonCard } from "@/lib/types";
 import { VARIANT_LABELS } from "@/lib/variants";
-import Image from "next/image";
 import { useState } from "react";
 import CardPriceModal from "./CardPriceModal";
 import { staggerStyle, tiltHandlers } from "@/lib/motion";
@@ -53,13 +53,12 @@ function CardItem({ tile, index, onToggle, onInfo }: CardItemProps) {
         } ${pulse ? "owned-pulse" : ""}`}
       >
         {!imgError ? (
-          <Image
+          <CardImage
             src={card.images.small}
             alt={`${card.name}${label}`}
             width={146}
             height={204}
             className="w-full h-auto block"
-            unoptimized
             onError={() => setImgError(true)}
           />
         ) : (

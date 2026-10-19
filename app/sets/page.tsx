@@ -137,7 +137,7 @@ function SetMasterSetView() {
         </div>
       </div>
 
-      <MasterSetCards cards={cards} ownedKeys={ownedKeys} onToggle={(k) => toggleCard(id, k)} quickAdd />
+      <MasterSetCards cards={cards} ownedKeys={ownedKeys} onToggle={(k) => toggleCard(id, k)} quickAdd offlineKey={`set:${id}`} />
 
       {editOpen && tracked && (
         <CollectionEditSheet

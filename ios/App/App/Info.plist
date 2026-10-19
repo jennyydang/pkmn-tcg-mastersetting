@@ -63,7 +63,7 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>The camera is used to scan cards into your collection. Images stay on your device.</string>
+	<string>Scan a card to identify it and see its prices. Photos are read on your device and never uploaded.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>

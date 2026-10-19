@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import CardImage from "@/app/components/CardImage";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { staggerStyle } from "@/lib/motion";
 import { useCardData } from "@/lib/cardData";
@@ -107,7 +107,7 @@ export default function WantsPage() {
         {rows.map(({ key, card, variant, target, price, hit }, i) => (
           <li key={key} style={staggerStyle(i)} className={`stagger-in flex items-center gap-3 bg-white dark:bg-gray-800 rounded-2xl border p-3 shadow-sm ${hit ? "border-green-400 dark:border-green-600" : "border-gray-200 dark:border-gray-700"}`}>
             <button onClick={() => setOpenKey(key)} className="flex flex-1 min-w-0 items-center gap-3 text-left">
-              <Image src={card!.images.small} alt="" width={44} height={62} className="rounded shrink-0" unoptimized />
+              <CardImage src={card!.images.small} alt="" width={44} height={62} className="rounded shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
                   {card!.name}{variant && cardVariants(card!).length > 1 && <span className="text-gray-500 dark:text-gray-400"> · {VARIANT_LABELS[variant].long}</span>}

@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { supabase } from "./supabase";
 import { useAuth } from "./auth";
 import { useStore } from "./store";
+import { isNetworkError, writeOrQueue } from "./syncQueue";
 
 // Want list and details about the copies you own (supabase/wants_and_copies.sql).
 // Both are keyed like owned_cards: "<card id>" or "<card id>|<variant>".
@@ -51,6 +52,23 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
   const [available, setAvailable] = useState(false);
   const [wants, setWants]         = useState<Map<string, number | null>>(new Map());
   const [details, setDetails]     = useState<Map<string, CopyDetails>>(new Map());
+  const [reloadToken, setReloadToken] = useState(0);
+
+  // Copy kept on this device so the want list and details work offline.
+  const cacheKey = userId ? `pocketi-carddata:${userId}` : null;
+  useEffect(() => {
+    if (!cacheKey || !available) return;
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ wants: [...wants], details: [...details] }));
+    } catch {}
+  }, [cacheKey, available, wants, details]);
+
+  // Reload when the connection comes back (queued saves are sent first by the store).
+  useEffect(() => {
+    const onOnline = () => setReloadToken((n) => n + 1);
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -61,7 +79,20 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
     ]).then(([w, d]) => {
       if (cancelled) return;
       if (w.error || d.error) {
-        console.error("Supabase load error (want_list/card_details)", w.error ?? d.error);
+        const err = w.error ?? d.error;
+        if (isNetworkError(err)) {
+          // Offline: use the copy saved on this device, if there is one.
+          try {
+            const saved = JSON.parse(localStorage.getItem(`pocketi-carddata:${userId}`) ?? "null");
+            if (saved) {
+              setWants(new Map(saved.wants));
+              setDetails(new Map(saved.details));
+              setAvailable(true);
+              return;
+            }
+          } catch {}
+        }
+        console.error("Supabase load error (want_list/card_details)", err);
         setAvailable(false);
         return;
       }
@@ -76,7 +107,7 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
       setAvailable(true);
     });
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, reloadToken]);
 
   const notReady = useCallback(() => {
     reportSyncError("Want list and card details aren't set up yet. Run supabase/wants_and_copies.sql in Supabase.");
@@ -90,17 +121,17 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
       else next.delete(key);
       return next;
     });
-    const op = wanted
-      ? supabase.from("want_list").upsert({ user_id: userId, card_id: key, target_price: targetPrice }, { onConflict: "user_id,card_id" })
-      : supabase.from("want_list").delete().eq("user_id", userId).eq("card_id", key);
-    op.then(({ error }) => {
+    writeOrQueue(userId, "want_list", wanted
+      ? { kind: "upsert", table: "want_list", onConflict: "user_id,card_id", rows: { user_id: userId, card_id: key, target_price: targetPrice } }
+      : { kind: "delete", table: "want_list", match: { user_id: userId, card_id: key } }
+    ).then((error) => {
       if (error) reportSyncError(`Couldn't save your want list (${error.message}). Refresh to see what's saved.`);
     });
   }, [userId, available, notReady, reportSyncError]);
 
   const saveDetails = useCallback(async (key: string, d: CopyDetails) => {
     if (!userId || !available) { notReady(); return false; }
-    const { error } = await supabase.from("card_details").upsert({
+    const error = await writeOrQueue(userId, "card_details", { kind: "upsert", table: "card_details", onConflict: "user_id,card_id", rows: {
       user_id:        userId,
       card_id:        key,
       quantity:       d.quantity,
@@ -109,7 +140,7 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
       grade:          d.gradeCompany ? d.grade : null,
       purchase_price: d.purchasePrice,
       updated_at:     new Date().toISOString(),
-    }, { onConflict: "user_id,card_id" });
+    } });
     if (error) {
       reportSyncError(`Couldn't save card details (${error.message}).`);
       return false;

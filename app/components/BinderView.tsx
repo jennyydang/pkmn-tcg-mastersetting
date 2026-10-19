@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import CardImage from "./CardImage";
 import { VARIANT_LABELS } from "@/lib/variants";
 import { tapFeedback } from "@/lib/haptics";
 import { CardTile } from "./CardGrid";
@@ -124,7 +124,7 @@ function Pocket({ tile, onToggle }: { tile: CardTile; onToggle: (key: string) =>
     >
       {owned ? (
         <>
-          <Image src={card.images.small} alt="" width={146} height={204} className="w-full h-full object-cover" unoptimized />
+          <CardImage src={card.images.small} alt="" width={146} height={204} className="w-full h-full object-cover" />
           {/* Sleeve sheen */}
           <span className="absolute inset-0 bg-gradient-to-br from-white/25 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
         </>

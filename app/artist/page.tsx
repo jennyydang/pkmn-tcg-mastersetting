@@ -126,7 +126,7 @@ function ArtistMasterSetView() {
         <MasterSetProgress cards={cards} ownedKeys={ownedKeys} completeLabel="Artist Collection Complete!" />
       </div>
 
-      <MasterSetCards cards={cards} ownedKeys={ownedKeys} onToggle={(k) => toggleCard(artist, k)} showSetNames />
+      <MasterSetCards cards={cards} ownedKeys={ownedKeys} onToggle={(k) => toggleCard(artist, k)} showSetNames offlineKey={`artist:${artist}`} />
 
       {editOpen && tracked && (
         <CollectionEditSheet

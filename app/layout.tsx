@@ -9,6 +9,7 @@ import HeaderActions from "./components/HeaderActions";
 import BottomNav from "./components/BottomNav";
 import SyncErrorBanner from "./components/SyncErrorBanner";
 import AnnouncementBanner from "./components/AnnouncementBanner";
+import OfflineBanner from "./components/OfflineBanner";
 import AppLogo from "./components/AppLogo";
 import Link from "next/link";
 import { APP_NAME } from "@/lib/appInfo";
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <HeaderActions />
                 </div>
               </header>
+              <OfflineBanner />
               <AnnouncementBanner />
               <SyncErrorBanner />
               <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-[calc(2rem+env(safe-area-inset-bottom))]">

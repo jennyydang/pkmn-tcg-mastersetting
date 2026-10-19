@@ -5,7 +5,7 @@ import { APP_NAME, SUPPORT_EMAIL } from "@/lib/appInfo";
 export const metadata: Metadata = { title: `Privacy Policy · ${APP_NAME}` };
 
 // Describes what the app actually does with data (lib/store.tsx, lib/api.ts,
-// CardScanSheet). Keep it in step when adding features that collect or share data.
+// lib/cardScan.ts). Keep it in step when adding features that collect or share data.
 export default function PrivacyPage() {
   return (
     <article className="max-w-2xl mx-auto text-sm leading-relaxed text-gray-700 dark:text-gray-300 space-y-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-gray-900 [&_h2]:dark:text-gray-100 [&_h2]:pt-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1">
@@ -38,11 +38,18 @@ export default function PrivacyPage() {
         feedback that includes your email deleted, contact us.
       </p>
 
-      <h2>Camera</h2>
+      <h2>Camera and photos</h2>
       <p>
-        On devices that support barcode scanning, the card scanner uses your camera. Images are processed on your
-        device only; they are never uploaded or stored. You can deny or revoke camera access at any time in your
-        device settings, and search still works without it.
+        The card scanner uses your camera, or a photo you choose, to read a card’s name and number. The image is
+        processed on your device only; it’s never uploaded or stored. You can deny or revoke camera access at any
+        time in your device settings, and you can always search for cards instead.
+      </p>
+
+      <h2>Data saved on your device</h2>
+      <p>
+        To work offline, the app keeps copies of card details, prices and images you’ve viewed or saved, plus any
+        changes made while offline until they sync. This stays on your device. Signing out removes your collection
+        data from the device; changes that haven’t synced yet are kept until you sign back in.
       </p>
 
       <h2>How we use your information</h2>

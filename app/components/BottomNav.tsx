@@ -1,19 +1,20 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { tapFeedback } from "@/lib/haptics";
-import { CardsIcon, HomeIcon, StarIcon, TrendingUpIcon, UserIcon } from "./Icons";
+import { CameraIcon, CardsIcon, HomeIcon, StarIcon, UserIcon } from "./Icons";
 
-// Phone tab bar (hidden from md up, where the header links are shown instead).
-// Each tab also owns the pages reached from it, so they stay highlighted there.
+// Phone tab bar (hidden from md up, where the header links are shown instead):
+// two tabs either side of a raised Scan button. Each tab also owns the pages
+// reached from it, so they stay highlighted there (Portfolio lives under Collection).
 const TABS = [
-  { href: "/",           label: "Home",       Icon: HomeIcon,       match: ["/", "/sets", "/pokemon", "/artist", "/custom"] },
-  { href: "/collection", label: "Collection", Icon: CardsIcon,      match: ["/collection"] },
-  { href: "/wants",      label: "Wants",      Icon: StarIcon,       match: ["/wants"] },
-  { href: "/portfolio",  label: "Portfolio",  Icon: TrendingUpIcon, match: ["/portfolio"] },
-  { href: "/account",    label: "Account",    Icon: UserIcon,       match: ["/account", "/admin", "/feedback", "/privacy", "/support"] },
+  { href: "/",           label: "Home",       Icon: HomeIcon,  match: ["/", "/sets", "/pokemon", "/artist", "/custom"] },
+  { href: "/collection", label: "Collection", Icon: CardsIcon, match: ["/collection", "/portfolio"] },
+  { href: "/wants",      label: "Wants",      Icon: StarIcon,  match: ["/wants"] },
+  { href: "/account",    label: "Account",    Icon: UserIcon,  match: ["/account", "/admin", "/feedback", "/privacy", "/support"] },
 ] as const;
 
 export default function BottomNav() {
@@ -29,10 +30,12 @@ export default function BottomNav() {
       className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur border-t border-gray-200 dark:border-gray-800 pb-[env(safe-area-inset-bottom)]"
     >
       <ul className="flex">
-        {TABS.map(({ href, label, Icon }) => {
+        {TABS.map(({ href, label, Icon }, i) => {
           const current = active?.href === href;
           return (
-            <li key={href} className="flex-1">
+            <Fragment key={href}>
+            {i === 2 && <ScanButton current={pathname === "/scan"} />}
+            <li className="flex-1">
               <Link
                 href={href}
                 aria-current={current ? "page" : undefined}
@@ -47,9 +50,27 @@ export default function BottomNav() {
                 {label}
               </Link>
             </li>
+            </Fragment>
           );
         })}
       </ul>
     </nav>
+  );
+}
+
+// Raised camera button in the middle of the bar, opening the card scanner.
+function ScanButton({ current }: { current: boolean }) {
+  return (
+    <li className="flex-1 flex justify-center">
+      <Link
+        href="/scan"
+        aria-label="Scan a card"
+        aria-current={current ? "page" : undefined}
+        onClick={() => tapFeedback()}
+        className="-mt-5 w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 ring-4 ring-white dark:ring-gray-900 active:scale-90 transition-transform focus-visible:outline-none focus-visible:ring-blue-300"
+      >
+        <CameraIcon className="w-6 h-6" />
+      </Link>
+    </li>
   );
 }

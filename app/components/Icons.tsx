@@ -111,3 +111,15 @@ export function TrendingUpIcon({ className }: IconProps) {
 export function UserIcon({ className }: IconProps) {
   return <OutlineIcon className={className} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />;
 }
+
+export function CloudOffIcon({ className }: IconProps) {
+  return <OutlineIcon className={className} d="M3 3l18 18M8.5 8.5A4.5 4.5 0 004 13a4 4 0 004 4h9m2.6-1.4A3.5 3.5 0 0017 10h-.3a6 6 0 00-7.8-4.7" />;
+}
+
+export function SyncIcon({ className }: IconProps) {
+  return <OutlineIcon className={className} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />;
+}
+
+export function CameraIcon({ className }: IconProps) {
+  return <OutlineIcon className={className} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9zM15 13a3 3 0 11-6 0 3 3 0 016 0z" />;
+}

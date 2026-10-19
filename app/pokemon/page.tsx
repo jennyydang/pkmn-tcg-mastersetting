@@ -118,7 +118,7 @@ function PokemonMasterSetView() {
         <MasterSetProgress cards={cards} ownedKeys={ownedKeys} completeLabel="Master Set Complete!" />
       </div>
 
-      <MasterSetCards cards={cards} ownedKeys={ownedKeys} onToggle={(k) => toggleCard(name, k)} showSetNames />
+      <MasterSetCards cards={cards} ownedKeys={ownedKeys} onToggle={(k) => toggleCard(name, k)} showSetNames offlineKey={`pokemon:${name}`} />
 
       {editOpen && tracked && (
         <CollectionEditSheet
