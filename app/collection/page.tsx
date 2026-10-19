@@ -11,7 +11,7 @@ import { getCardsByIds, getCard, getCardsForArtist, getCardsForPokemon, getCards
 import { PokemonCard, TrackedMasterSet } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
 import { ownedCardIds, parseOwnedKey } from "@/lib/variants";
-import { staggerStyle } from "@/lib/motion";
+import { staggerStyle, tiltHandlers } from "@/lib/motion";
 import { CardsIcon, ChevronRightIcon, SearchIcon, SwapIcon, TrendingUpIcon } from "@/app/components/Icons";
 import { useCardData } from "@/lib/cardData";
 import { extrasFromDetails } from "@/lib/trade";
@@ -352,25 +352,21 @@ export default function CollectionPage() {
                 </svg>
               </button>
 
-              {/* Info ("i") button */}
+              {/* Tap the card for its details and prices */}
               <button
                 onClick={() => handleInfo(card.id)}
-                aria-label={`View price for ${card.name} (${card.set.name} #${card.number})`}
-                className="absolute top-0 left-0 w-11 h-11 flex items-center justify-center transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                {...tiltHandlers}
+                aria-label={`${card.name} (${card.set.name} #${card.number}): details and prices`}
+                className="tile block w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               >
-                <span className="w-5 h-5 bg-black/50 group-hover:bg-black/70 rounded-full flex items-center justify-center" aria-hidden="true">
-                  <span className="text-white text-[10px] font-bold leading-none">i</span>
-                </span>
+                <CardImage
+                  src={card.images.small}
+                  alt=""
+                  width={146}
+                  height={204}
+                  className="w-full h-auto block rounded-lg shadow-sm"
+                />
               </button>
-
-              {/* Card image */}
-              <CardImage
-                src={card.images.small}
-                alt={card.name}
-                width={146}
-                height={204}
-                className="w-full h-auto block rounded-lg shadow-sm"
-              />
 
               {(() => {
                 const n = setsHoldingCard(trackedItems, card.id).length;
