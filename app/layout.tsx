@@ -10,11 +10,12 @@ import SyncErrorBanner from "./components/SyncErrorBanner";
 import AnnouncementBanner from "./components/AnnouncementBanner";
 import { PokeBallIcon } from "./components/Icons";
 import Link from "next/link";
+import { APP_NAME } from "@/lib/appInfo";
 
 const geist = Geist({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Pokémon TCG Master Set Tracker",
+  title: APP_NAME,
   description: "Track your progress toward mastering every Pokémon TCG set",
 };
 
@@ -42,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
                   <Link href="/" className="flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100 hover:opacity-80 transition-opacity">
                     <PokeBallIcon className="w-7 h-7 text-red-500" />
-                    <span className="hidden sm:block text-sm">Master Set Tracker</span>
+                    <span className="hidden sm:block text-sm">{APP_NAME}</span>
                   </Link>
                   <HeaderActions />
                 </div>

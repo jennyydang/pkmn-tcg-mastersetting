@@ -31,13 +31,13 @@ baked into the bundle at build time):
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key |
-| `NEXT_PUBLIC_SITE_URL` | The deployed site, e.g. `https://mastersettracker.app`. Password-reset emails link here (the app's own origin, `capacitor://localhost`, can't be opened from email). |
+| `NEXT_PUBLIC_SITE_URL` | The deployed site, e.g. `https://pocketi.app`. Password-reset emails link here (the app's own origin, `capacitor://localhost`, can't be opened from email). |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | The address shown on the Support and Privacy pages. Apple reviews these. |
 
 ## 3. App identity
 
 - **Bundle ID**: `capacitor.config.ts` (`appId`) and Xcode → App target → Signing & Capabilities. It's
-  `com.mastersettracker.app` now; change it to one you own (e.g. `com.yourname.mastersettracker`) and
+  `com.pocketi.app` now; change it to one you own (e.g. `com.yourname.pocketi`) and
   register it in App Store Connect.
 - **Version**: Xcode → App target → General (`MARKETING_VERSION` 1.0, build `CURRENT_PROJECT_VERSION` 1).
   Increase the build number for every upload.
@@ -79,8 +79,10 @@ Test on a real iPhone first (plug it in, select it, press Run), and through **Te
 Apple rejects apps that use other companies' trademarks without permission (Guideline 5.2.1), and
 Nintendo/The Pokémon Company actively enforce theirs. To reduce the risk:
 
-- Keep "Pokémon" **out of the app name, subtitle and icon**. "Master Set Tracker" is fine; something like
-  "Master Set Tracker for TCG Collectors" is safer than any name containing "Pokémon".
+- Keep "Pokémon" **out of the app name, subtitle and icon**. The name is "pocketi"; a subtitle like
+  "Master set tracker for TCG collectors" is safer than any wording containing "Pokémon".
+- "pocketi" sits close to "Pokémon TCG Pocket" (The Pokémon Company's own app). Check the name isn't
+  taken or confusingly similar before submitting: search the App Store and USPTO/EUIPO trademarks.
 - The in-app header logo (`PokeBallIcon` in `app/components/Icons.tsx`) is a Poké Ball, which is a
   trademarked design. Swap it for the app icon artwork before submitting.
 - Keep the "unofficial, not affiliated" disclaimer (on the Support page) and say the same in the App Store

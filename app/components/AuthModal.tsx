@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { APP_NAME } from "@/lib/appInfo";
 import { useAuth } from "@/lib/auth";
 import { PokeBallIcon } from "./Icons";
 
@@ -49,7 +50,7 @@ export default function AuthModal() {
         {/* Header */}
         <div className="bg-gradient-to-b from-red-50 to-white dark:from-gray-700 dark:to-gray-800 px-6 pt-8 pb-6 flex flex-col items-center gap-3">
           <PokeBallIcon className="w-12 h-12 text-red-500" />
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Master Set Tracker</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{APP_NAME}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
             {mode === "signin"
               ? "Sign in to access your collection."

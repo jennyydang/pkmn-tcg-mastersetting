@@ -1,4 +1,5 @@
-export const APP_NAME = "Master Set Tracker";
+// Always written lowercase.
+export const APP_NAME = "pocketi";
 
 // Shown on the privacy and support pages. Set NEXT_PUBLIC_SUPPORT_EMAIL before
 // submitting to the App Store; Apple reviews these pages.

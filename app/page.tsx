@@ -16,6 +16,7 @@ import MasterSetCard from "./components/PokemonMasterSetCard";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import AuthModal from "./components/AuthModal";
+import { APP_NAME } from "@/lib/appInfo";
 import { CardsIcon } from "./components/Icons";
 
 export default function Home() {
@@ -47,7 +48,7 @@ export default function Home() {
     <div>
       {!user && <AuthModal />}
       <div className="mb-10 flex flex-col md:items-center">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1 md:text-center">Master Set Tracker</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1 md:text-center">{APP_NAME}</h1>
         <p className="text-gray-500 dark:text-gray-400 mb-6 md:text-center">
           Search a Pokémon, set, or artist to start tracking every card.
         </p>

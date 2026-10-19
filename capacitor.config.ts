@@ -2,8 +2,8 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   // Must match the bundle ID registered in App Store Connect; change before submitting.
-  appId: "com.mastersettracker.app",
-  appName: "Master Set Tracker",
+  appId: "com.pocketi.app",
+  appName: "pocketi",
   // `npm run build` writes the static export here.
   webDir: "out",
   ios: {
