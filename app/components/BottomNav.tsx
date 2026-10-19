@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { tapFeedback } from "@/lib/haptics";
+import { pressShutter } from "@/lib/scanShutter";
 import { CameraIcon, CardsIcon, HomeIcon, StarIcon, UserIcon } from "./Icons";
 
 // Phone tab bar (hidden from md up, where the header links are shown instead):
@@ -58,15 +59,19 @@ export default function BottomNav() {
   );
 }
 
-// Raised camera button in the middle of the bar, opening the card scanner.
+// Raised camera button in the middle of the bar: opens the card scanner, and on
+// the scanner it's the shutter (lib/scanShutter.ts).
 function ScanButton({ current }: { current: boolean }) {
   return (
     <li className="flex-1 flex justify-center">
       <Link
         href="/scan"
-        aria-label="Scan a card"
+        aria-label={current ? "Take photo" : "Scan a card"}
         aria-current={current ? "page" : undefined}
-        onClick={() => tapFeedback()}
+        onClick={(e) => {
+          tapFeedback();
+          if (current) { e.preventDefault(); pressShutter(); }
+        }}
         className="-mt-5 w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 ring-4 ring-white dark:ring-gray-900 active:scale-90 transition-transform focus-visible:outline-none focus-visible:ring-blue-300"
       >
         <CameraIcon className="w-6 h-6" />

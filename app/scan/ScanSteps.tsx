@@ -5,6 +5,7 @@ import { searchCards, artistMatch } from "@/lib/api";
 import { ScanText } from "@/lib/cardScan";
 import { PokemonCard } from "@/lib/types";
 import { tapFeedback } from "@/lib/haptics";
+import { useShutter } from "@/lib/scanShutter";
 import { staggerStyle } from "@/lib/motion";
 import CardImage from "@/app/components/CardImage";
 import { SearchIcon } from "@/app/components/Icons";
@@ -56,6 +57,9 @@ export function CameraStep({ onCard, onManual, overlay }: { onCard: (canvas: HTM
     onCard(canvas);
   }
 
+  // On phones the tab bar's camera button is the shutter.
+  useShutter(capture, !error);
+
   // A chosen photo is assumed to be mostly card; crop to card proportions from the centre.
   function fromFile(file: File) {
     const img = new Image();
@@ -74,7 +78,8 @@ export function CameraStep({ onCard, onManual, overlay }: { onCard: (canvas: HTM
 
   return (
     <div className="space-y-4">
-      <div className="relative -mx-4 sm:mx-0 bg-black sm:rounded-2xl overflow-hidden aspect-[3/4] max-h-[65dvh] w-[calc(100%+2rem)] sm:w-full">
+      {/* Sized so the mode switch above and the controls below stay on screen with the tab bar. */}
+      <div className="relative -mx-4 sm:mx-0 bg-black sm:rounded-2xl overflow-hidden aspect-[3/4] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-21rem)] md:max-h-[65dvh] w-[calc(100%+2rem)] sm:w-full">
         {error ? (
           <p className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-gray-300">{error}</p>
         ) : (
@@ -90,13 +95,15 @@ export function CameraStep({ onCard, onManual, overlay }: { onCard: (canvas: HTM
         {overlay}
       </div>
 
-      <div className="flex items-center justify-center gap-6">
-        <button onClick={() => fileRef.current?.click()} className="text-sm font-medium text-blue-600 dark:text-blue-400 w-24">Choose photo</button>
+      <div className="flex items-center justify-between md:justify-center gap-6">
+        <button onClick={() => fileRef.current?.click()} className="shrink-0 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400 min-h-[44px] text-left md:w-24 md:text-center">Choose photo</button>
+        {/* Phones: the tab bar's camera button below takes the photo. */}
+        <p className="md:hidden text-xs text-gray-500 dark:text-gray-400 text-center whitespace-nowrap">Tap the camera below</p>
         <button onClick={capture} disabled={!!error} aria-label="Scan card"
-          className="w-[72px] h-[72px] rounded-full border-4 border-blue-600 bg-white dark:bg-gray-100 shadow-lg active:scale-90 transition-transform disabled:opacity-40 flex items-center justify-center">
+          className="hidden md:flex w-[72px] h-[72px] rounded-full border-4 border-blue-600 bg-white dark:bg-gray-100 shadow-lg active:scale-90 transition-transform disabled:opacity-40 items-center justify-center">
           <span className="w-14 h-14 rounded-full bg-blue-600" />
         </button>
-        <button onClick={onManual} className="text-sm font-medium text-blue-600 dark:text-blue-400 w-24">Type it in</button>
+        <button onClick={onManual} className="shrink-0 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400 min-h-[44px] text-right md:w-24 md:text-center">Type it in</button>
       </div>
       <input ref={fileRef} type="file" accept="image/*" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) fromFile(f); e.target.value = ""; }} />

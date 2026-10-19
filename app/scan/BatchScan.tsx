@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getCard } from "@/lib/api";
 import { confidentMatch, findCandidates, readCard, ScanText } from "@/lib/cardScan";
 import { useAddCopies } from "@/lib/addCopies";
+import { useShutter } from "@/lib/scanShutter";
 import { useConfirm } from "@/lib/confirm";
 import { CardVariant, PokemonCard } from "@/lib/types";
 import { VARIANT_LABELS, cardVariants, variantPrice } from "@/lib/variants";
@@ -66,6 +67,8 @@ export default function BatchScan({ toggle }: { toggle: React.ReactNode }) {
   const [toast, setToast] = useState<{ text: string; ok: boolean; key: number } | null>(null);
   const [adding, setAdding] = useState(false);
   const addCopies = useAddCopies();
+  // From review, a search or the summary, the tab bar's camera button goes back to the camera.
+  useShutter(() => { setView({ kind: "camera" }); window.scrollTo({ top: 0 }); }, view.kind !== "camera");
   const confirm = useConfirm();
 
   useEffect(() => {

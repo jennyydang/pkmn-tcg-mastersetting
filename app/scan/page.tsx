@@ -17,6 +17,7 @@ import CardImage from "@/app/components/CardImage";
 import { CheckIcon, StarIcon } from "@/app/components/Icons";
 import { CameraStep, PickStep } from "./ScanSteps";
 import BatchScan from "./BatchScan";
+import { useShutter } from "@/lib/scanShutter";
 import { useConfirm, wantRemovalPrompt } from "@/lib/confirm";
 import AddToSetsSheet, { addedIntro } from "@/app/components/AddToSetsSheet";
 import { useAddToCollection } from "@/lib/addCopies";
@@ -67,6 +68,8 @@ export default function ScanPage() {
 /** One card at a time: scan, then see its prices by condition. */
 function SingleScan({ toggle }: { toggle: React.ReactNode }) {
   const [step, setStep] = useState<Step>({ kind: "camera" });
+  // From a result or the search, the tab bar's camera button goes back to the camera.
+  useShutter(() => { setStep({ kind: "camera" }); window.scrollTo({ top: 0 }); }, step.kind !== "camera");
 
   async function handleCard(canvas: HTMLCanvasElement) {
     setStep({ kind: "reading" });
@@ -195,14 +198,15 @@ function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loadi
       )}
       {setsOpen && <AddToSetsSheet card={card} intro={setsOpen.intro} initialVariant={variant} onClose={() => setSetsOpen(null)} />}
 
-      <div className="flex items-center justify-between">
-        <button onClick={onScanAnother} className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 min-h-[44px]">
-          Scan another card
-        </button>
-        {card.tcgplayer?.url && (
-          <a href={card.tcgplayer.url} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 dark:text-gray-400 hover:underline">View on TCGplayer</a>
-        )}
-      </div>
+      {card.tcgplayer?.url && (
+        <div className="flex justify-end">
+          <a href={card.tcgplayer.url} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 dark:text-gray-400 hover:underline min-h-[44px] flex items-center">View on TCGplayer</a>
+        </div>
+      )}
+      {/* Larger screens have no tab bar shutter: a way back to the camera. */}
+      <button onClick={onScanAnother} className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 min-h-[44px]">
+        Scan another card
+      </button>
     </div>
   );
 }
