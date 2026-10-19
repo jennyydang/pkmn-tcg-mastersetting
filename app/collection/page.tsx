@@ -8,9 +8,10 @@ import Image from "next/image";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { getCardsByIds, getCard, getCardsForArtist, getCardsForPokemon, getCardsForSet, searchCards } from "@/lib/api";
-import { PokemonCard, TrackedMasterSet } from "@/lib/types";
+import { CardVariant, PokemonCard, TrackedMasterSet } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
-import { ownedCardIds, parseOwnedKey } from "@/lib/variants";
+import { cardVariants, ownedCardIds, parseOwnedKey } from "@/lib/variants";
+import VersionPicker from "@/app/components/VersionPicker";
 import { staggerStyle, tiltHandlers } from "@/lib/motion";
 import { CardsIcon, ChevronRightIcon, SearchIcon, SwapIcon, TrendingUpIcon } from "@/app/components/Icons";
 import { useCardData } from "@/lib/cardData";
@@ -35,7 +36,8 @@ export default function CollectionPage() {
   const [priceCard, setPriceCard]       = useState<PokemonCard | null>(null);
   const [priceOpen, setPriceOpen]       = useState(false);
   const [priceLoading, setPriceLoading] = useState(false);
-  const [setsFor, setSetsFor]           = useState<{ card: PokemonCard; intro?: string } | null>(null);
+  const [setsFor, setSetsFor]           = useState<{ card: PokemonCard; intro?: string; variant?: CardVariant } | null>(null);
+  const [versionFor, setVersionFor]     = useState<PokemonCard | null>(null);
 
 
   const [query, setQuery]               = useState("");
@@ -147,7 +149,14 @@ export default function CollectionPage() {
     // Search results can lack details (like the artist) needed to find every
     // master set the card belongs to; the full card is usually already cached.
     const card = await getCard(result.id).catch(() => result);
-    const checked = addToCollection(card);
+    // Printed in more than one version: ask which one before adding.
+    if (cardVariants(card).length > 1) setVersionFor(card);
+    else finishAdd(card);
+  }
+
+  function finishAdd(card: PokemonCard, variant?: CardVariant) {
+    setVersionFor(null);
+    const checked = addToCollection(card, variant);
     cardCache.current.set(card.id, card);
     // Optimistically prepend to cards
     setCards((prev) => {
@@ -155,7 +164,7 @@ export default function CollectionPage() {
       return [card, ...prev];
     });
     // Offer to count it toward any tracked sets it belongs to.
-    if (trackedItems.some((t) => setFitsCard(t, card))) setSetsFor({ card, intro: addedIntro(checked) });
+    if (trackedItems.some((t) => setFitsCard(t, card))) setSetsFor({ card, intro: addedIntro(checked), variant });
   }
 
   // The grid shows every card you own, so removing a card also unchecks it in
@@ -393,7 +402,8 @@ export default function CollectionPage() {
       )}
 
 
-      {setsFor && <AddToSetsSheet card={setsFor.card} intro={setsFor.intro} onClose={() => setSetsFor(null)} />}
+      {versionFor && <VersionPicker card={versionFor} onPick={(v) => finishAdd(versionFor, v)} onCancel={() => setVersionFor(null)} />}
+      {setsFor && <AddToSetsSheet card={setsFor.card} intro={setsFor.intro} initialVariant={setsFor.variant} onClose={() => setSetsFor(null)} />}
 
       {/* Price modal */}
       {priceOpen && (

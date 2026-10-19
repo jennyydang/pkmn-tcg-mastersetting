@@ -193,7 +193,7 @@ function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loadi
           {setCount > 0 ? `In ${setCount} of your ${setCount === 1 ? "set" : "sets"} · Change` : "Add to your master sets"}
         </button>
       )}
-      {setsOpen && <AddToSetsSheet card={card} intro={setsOpen.intro} onClose={() => setSetsOpen(null)} />}
+      {setsOpen && <AddToSetsSheet card={card} intro={setsOpen.intro} initialVariant={variant} onClose={() => setSetsOpen(null)} />}
 
       <div className="flex items-center justify-between">
         <button onClick={onScanAnother} className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 min-h-[44px]">

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { setFitsCard } from "@/lib/setMembership";
-import { PokemonCard, TrackedMasterSet } from "@/lib/types";
+import { CardVariant, PokemonCard, TrackedMasterSet } from "@/lib/types";
 import { VARIANT_LABELS, cardVariants, ownedKey } from "@/lib/variants";
 import { tapFeedback } from "@/lib/haptics";
 import CardImage from "./CardImage";
@@ -32,12 +32,14 @@ interface Props {
   onClose: () => void;
   /** Shown above the list, e.g. right after adding the card. */
   intro?: string;
+  /** The version just added, so its sets are the ones shown ticked. */
+  initialVariant?: CardVariant;
 }
 
-export default function AddToSetsSheet({ card, onClose, intro }: Props) {
+export default function AddToSetsSheet({ card, onClose, intro, initialVariant }: Props) {
   const { trackedItems, toggleCard, addCustomCard } = useStore();
   const versions = cardVariants(card);
-  const [variant, setVariant] = useState(versions[0]);
+  const [variant, setVariant] = useState(initialVariant && versions.includes(initialVariant) ? initialVariant : versions[0]);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
