@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { getCardsByIds, getCard, searchCards } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
-import CardScanSheet from "@/app/components/CardScanSheet";
+import CardScanSheet, { useCanScan } from "@/app/components/CardScanSheet";
 import { ChevronRightIcon, SearchIcon } from "@/app/components/Icons";
 
 export default function CollectionPage() {
@@ -25,6 +25,7 @@ export default function CollectionPage() {
   const [priceLoading, setPriceLoading] = useState(false);
 
   const [scanOpen, setScanOpen]         = useState(false);
+  const canScan = useCanScan();
 
   const [query, setQuery]               = useState("");
   const [searchResults, setSearchResults] = useState<PokemonCard[]>([]);
@@ -223,8 +224,8 @@ export default function CollectionPage() {
           )}
         </div>
 
-        {/* Scan button */}
-        <button
+        {/* Scan button (hidden where barcode scanning isn't supported, e.g. iOS) */}
+        {canScan && <button
           onClick={() => setScanOpen(true)}
           aria-label="Scan a card"
           className="shrink-0 flex items-center gap-2 px-4 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
@@ -233,7 +234,7 @@ export default function CollectionPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 9V6a1 1 0 011-1h3M3 15v3a1 1 0 001 1h3m11-4v3a1 1 0 01-1 1h-3m4-12h-3a1 1 0 00-1 1v3" />
           </svg>
           Scan
-        </button>
+        </button>}
       </div>
 
       {/* Card grid */}

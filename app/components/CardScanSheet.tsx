@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { PokemonCard } from "@/lib/types";
 import { searchCards } from "@/lib/api";
@@ -20,6 +20,17 @@ interface Props {
   onAdd: (card: PokemonCard) => void;
   onClose: () => void;
   isInCollection: (cardId: string) => boolean;
+}
+
+// Scanning relies on the BarcodeDetector API, which iOS (Safari and the app's web
+// view) doesn't provide. Without it the camera can't detect anything, so don't open
+// it or ask for camera permission; the sheet becomes search-only.
+const canScan = typeof window !== "undefined" && !!window.BarcodeDetector;
+
+const noSubscribe = () => () => {};
+/** Whether this device can scan barcodes; false during prerender so hydration matches. */
+export function useCanScan() {
+  return useSyncExternalStore(noSubscribe, () => canScan, () => false);
 }
 
 export default function CardScanSheet({ onAdd, onClose, isInCollection }: Props) {
@@ -43,6 +54,7 @@ export default function CardScanSheet({ onAdd, onClose, isInCollection }: Props)
 
   // Start camera
   useEffect(() => {
+    if (!canScan) return;
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -140,8 +152,8 @@ export default function CardScanSheet({ onAdd, onClose, isInCollection }: Props)
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Scan or search for a card"
-        className={`fixed z-50 bottom-0 inset-x-0 bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl flex flex-col max-h-[92dvh] transition-transform duration-300 ease-out ${
+        aria-label={canScan ? "Scan or search for a card" : "Search for a card"}
+        className={`fixed z-50 bottom-0 inset-x-0 pb-[env(safe-area-inset-bottom)] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl flex flex-col max-h-[92dvh] transition-transform duration-300 ease-out ${
           visible ? "translate-y-0" : "translate-y-full"
         }`}
       >
@@ -150,7 +162,7 @@ export default function CardScanSheet({ onAdd, onClose, isInCollection }: Props)
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 pb-2 shrink-0">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Scan or Search</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{canScan ? "Scan or Search" : "Add a Card"}</h2>
           <button
             onClick={handleClose}
             aria-label="Close"
@@ -163,7 +175,7 @@ export default function CardScanSheet({ onAdd, onClose, isInCollection }: Props)
         {/* Scrollable content */}
         <div className="overflow-y-auto flex-1 pb-6">
           {/* Camera preview */}
-          <div className="relative bg-black rounded-xl mx-4 mt-2 overflow-hidden aspect-[4/3]">
+          {canScan && <div className="relative bg-black rounded-xl mx-4 mt-2 overflow-hidden aspect-[4/3]">
             {cameraError ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-900">
                 <svg className="w-10 h-10 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
@@ -188,7 +200,7 @@ export default function CardScanSheet({ onAdd, onClose, isInCollection }: Props)
                 </div>
               </>
             )}
-          </div>
+          </div>}
 
           {/* Search input */}
           <div className="px-4 mt-4">

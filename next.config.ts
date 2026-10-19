@@ -1,17 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Static HTML/JS in out/, which Capacitor bundles into the iOS app.
+  output: "export",
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "images.pokemontcg.io",
-      },
-      {
-        protocol: "https",
-        hostname: "assets.tcgdex.net",
-      },
-    ],
+    // No server to optimize images in a static export; card scans load directly.
+    unoptimized: true,
   },
 };
 

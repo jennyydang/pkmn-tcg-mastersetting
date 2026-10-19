@@ -12,9 +12,16 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<AuthError | null>;
   updatePassword: (password: string) => Promise<AuthError | null>;
+  deleteAccount: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+// Where emailed links (password reset) should open. Inside the iOS app the origin
+// is capacitor://localhost, which a browser can't open, so use the hosted site.
+function siteUrl() {
+  return process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser]       = useState<User | null>(null);
@@ -52,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Emails a recovery link that signs the user in and lands on /reset-password.
   const resetPassword = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${siteUrl()}/reset-password`,
     });
     return error;
   }, []);
@@ -62,8 +69,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return error;
   }, []);
 
+  // Deletes the account and all its data (supabase/delete_my_account.sql), then
+  // clears the local session; the server session no longer exists to sign out of.
+  const deleteAccount = useCallback(async () => {
+    const { error } = await supabase.rpc("delete_my_account");
+    if (error) return error.message;
+    await supabase.auth.signOut({ scope: "local" });
+    return null;
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resetPassword, updatePassword, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

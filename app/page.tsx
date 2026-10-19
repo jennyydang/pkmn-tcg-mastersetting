@@ -88,7 +88,7 @@ export default function Home() {
                     const id = `custom_${Date.now()}`;
                     addItem({ type: "custom", id, label: customName.trim(), image: "", totalCards: 0, ownedCards: [], customCards: [], subtitle: "Custom set" });
                     setShowCreateModal(false);
-                    router.push(`/custom/${id}`);
+                    router.push(`/custom?id=${encodeURIComponent(id)}`);
                   }
                 }}
                 placeholder="e.g. My Favourite Cards, Pikachu Collection…"
@@ -108,7 +108,7 @@ export default function Home() {
                   const id = `custom_${Date.now()}`;
                   addItem({ type: "custom", id, label: customName.trim(), image: "", totalCards: 0, ownedCards: [], customCards: [], subtitle: "Custom set" });
                   setShowCreateModal(false);
-                  router.push(`/custom/${id}`);
+                  router.push(`/custom?id=${encodeURIComponent(id)}`);
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-sm font-semibold text-white transition-colors"
               >

@@ -45,7 +45,7 @@ export default function CardPriceModal({ card, loading, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={card ? `Price info for ${card.name}` : "Price info"}
-        className={`fixed z-50 bottom-0 inset-x-0 md:inset-auto md:left-1/2 md:top-1/2 md:w-full md:max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out md:max-h-[85vh] ${
+        className={`fixed z-50 bottom-0 inset-x-0 pb-[env(safe-area-inset-bottom)] md:inset-auto md:left-1/2 md:top-1/2 md:w-full md:max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out md:max-h-[85vh] ${
           visible
             ? "translate-y-0 md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-100 md:scale-100"
             : "translate-y-full md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-0 md:scale-95"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { PokeBallIcon } from "./Icons";
 
@@ -125,6 +126,12 @@ export default function AuthModal() {
             )}
           </p>
         </form>
+
+        <p className="pb-5 -mt-2 text-center text-xs text-gray-400 dark:text-gray-500">
+          <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+          {" · "}
+          <Link href="/support" className="hover:underline">Support</Link>
+        </p>
       </div>
     </div>
   );

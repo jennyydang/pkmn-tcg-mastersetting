@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { searchCards, getCard } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
@@ -13,12 +13,26 @@ import { ChevronRightIcon, SearchIcon } from "@/app/components/Icons";
 import Image from "next/image";
 import Link from "next/link";
 
-interface Props {
-  params: Promise<{ id: string }>;
+// The ID comes from the query string (?id=…) rather than the path so the
+// app can be statically exported and bundled into the iOS app.
+export default function CustomSetPage() {
+  return (
+    <Suspense fallback={<PageSpinner />}>
+      <CustomSetView />
+    </Suspense>
+  );
 }
 
-export default function CustomSetPage({ params }: Props) {
-  const { id } = use(params);
+function PageSpinner() {
+  return (
+    <div className="flex items-center justify-center py-32">
+      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
+function CustomSetView() {
+  const id = useSearchParams().get("id") ?? "";
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { trackedItems, isCardOwned, toggleCard, addCustomCard, removeCustomCard, removeItem, updateItem } = useStore();

@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSet, getCardsForSet } from "@/lib/api";
 import { PokemonCard, PokemonSet } from "@/lib/types";
 import { useStore } from "@/lib/store";
@@ -13,12 +13,26 @@ import { ChevronRightIcon } from "@/app/components/Icons";
 import Image from "next/image";
 import Link from "next/link";
 
-interface Props {
-  params: Promise<{ id: string }>;
+// The ID comes from the query string (?id=…) rather than the path so the
+// app can be statically exported and bundled into the iOS app.
+export default function SetMasterSetPage() {
+  return (
+    <Suspense fallback={<PageSpinner />}>
+      <SetMasterSetView />
+    </Suspense>
+  );
 }
 
-export default function SetMasterSetPage({ params }: Props) {
-  const { id } = use(params);
+function PageSpinner() {
+  return (
+    <div className="flex items-center justify-center py-32">
+      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
+function SetMasterSetView() {
+  const id = useSearchParams().get("id") ?? "";
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [set, setSet] = useState<PokemonSet | null>(null);

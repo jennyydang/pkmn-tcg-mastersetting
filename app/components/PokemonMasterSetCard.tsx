@@ -66,12 +66,12 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
       };
 
   const href = type === "set"
-    ? `/sets/${id}`
+    ? `/sets?id=${encodeURIComponent(id)}`
     : type === "artist"
-    ? `/artist/${encodeURIComponent(id)}`
+    ? `/artist?name=${encodeURIComponent(id)}`
     : type === "custom"
-    ? `/custom/${id}`
-    : `/pokemon/${encodeURIComponent(id)}`;
+    ? `/custom?id=${encodeURIComponent(id)}`
+    : `/pokemon?name=${encodeURIComponent(id)}`;
 
   const cardContent = (
     <>

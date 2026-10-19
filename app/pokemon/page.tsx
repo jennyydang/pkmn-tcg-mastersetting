@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getCardsForPokemon, thumbnail } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import { useStore } from "@/lib/store";
@@ -12,13 +12,26 @@ import CollectionEditSheet from "@/app/components/CollectionEditSheet";
 import { ChevronRightIcon } from "@/app/components/Icons";
 import Link from "next/link";
 
-interface Props {
-  params: Promise<{ name: string }>;
+// The ID comes from the query string (?name=…) rather than the path so the
+// app can be statically exported and bundled into the iOS app.
+export default function PokemonMasterSetPage() {
+  return (
+    <Suspense fallback={<PageSpinner />}>
+      <PokemonMasterSetView />
+    </Suspense>
+  );
 }
 
-export default function PokemonMasterSetPage({ params }: Props) {
-  const { name: encodedName } = use(params);
-  const name = decodeURIComponent(encodedName);
+function PageSpinner() {
+  return (
+    <div className="flex items-center justify-center py-32">
+      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
+function PokemonMasterSetView() {
+  const name = useSearchParams().get("name") ?? "";
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [cards, setCards] = useState<PokemonCard[]>([]);

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { StoreProvider } from "@/lib/store";
@@ -16,6 +16,18 @@ export const metadata: Metadata = {
   description: "Track your progress toward mastering every Pokémon TCG set",
 };
 
+// "cover" lets the app draw under the iPhone notch and home indicator; the header
+// and main area pad themselves with the safe-area insets instead.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#111827" },
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -23,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <AuthProvider>
             <StoreProvider>
-              <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
+              <header className="sticky top-0 z-40 pt-[env(safe-area-inset-top)] bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
                   <Link href="/" className="flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100 hover:opacity-80 transition-opacity">
                     <PokeBallIcon className="w-7 h-7 text-red-500" />
@@ -33,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </div>
               </header>
               <SyncErrorBanner />
-              <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+              <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))]">
                 {children}
               </main>
             </StoreProvider>
