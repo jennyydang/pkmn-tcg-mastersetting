@@ -7,6 +7,7 @@ import { useAuth } from "./auth";
 import { migrateToTcgdexIds } from "./migrateIds";
 import { WriteOp, flushQueue, isNetworkError, writeOrQueue } from "./syncQueue";
 import { isOnline } from "./online";
+import { parseOwnedKey } from "./variants";
 import { useOnRefresh } from "./refresh";
 
 const STORAGE_KEY = "pkmn-tcg-mastersetting-v3";
@@ -261,6 +262,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }
 
   function toggleCard(id: string, cardId: string) {
+    // Checking a card in any master set also puts it in My Collection. Unchecking
+    // leaves it there: you may still own it, and it can be removed from Collection.
+    if (!isCardOwned(id, cardId)) addCollectionCard(parseOwnedKey(cardId).cardId);
     setTrackedItems((prev) =>
       prev.map((t) => {
         if (t.id !== id) return t;
