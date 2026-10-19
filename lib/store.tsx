@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { CustomCardDef, TrackedMasterSet } from "./types";
+import { CustomCardDef, SetStatus, TrackedMasterSet } from "./types";
 import { supabase } from "./supabase";
+import type { PostgrestError } from "@supabase/supabase-js";
 import { useAuth } from "./auth";
 import { migrateToTcgdexIds } from "./migrateIds";
 import { WriteOp, flushQueue, isNetworkError, writeOrQueue } from "./syncQueue";
@@ -25,6 +26,8 @@ interface StoreContextValue {
   addCustomCard:       (itemId: string, card: CustomCardDef) => void;
   removeCustomCard:    (itemId: string, cardId: string) => void;
   updateItem:          (id: string, updates: { label?: string; subtitle?: string; image?: string }) => void;
+  /** Mark a custom set ongoing or complete. */
+  setStatus:           (id: string, status: SetStatus) => void;
   collectionCardIds:   string[];
   addCollectionCard:   (cardId: string) => void;
   removeCollectionCard:(cardId: string) => void;
@@ -35,7 +38,41 @@ interface StoreContextValue {
   reportSyncError:     (message: string) => void;
 }
 
-export const StoreContext = createContext<StoreContextValue | null>(null);
+export // Whether tracked_master_sets has the status column (supabase/set_status.sql);
+// null until the first load finds out.
+let statusColumn: boolean | null = null;
+
+interface SetRow {
+  item_id: string;
+  type: string;
+  label: string;
+  image: string;
+  total_cards: number;
+  subtitle: string | null;
+  sort_order: number;
+  status?: SetStatus | null;
+}
+
+/** Load tracked sets, with their status when the column exists. */
+async function loadSets(userId: string): Promise<{ data: SetRow[] | null; error: PostgrestError | null }> {
+  const columns = "item_id, type, label, image, total_cards, subtitle, sort_order";
+  const query = async (cols: string) => {
+    const { data, error } = await supabase.from("tracked_master_sets").select(cols).eq("user_id", userId).order("sort_order", { ascending: true });
+    return { data: data as unknown as SetRow[] | null, error };
+  };
+  if (statusColumn !== false) {
+    const res = await query(`${columns}, status`);
+    // 42703: undefined column, i.e. the SQL hasn't been run yet.
+    if (res.error?.code !== "42703") {
+      if (!res.error) statusColumn = true;
+      return res;
+    }
+    statusColumn = false;
+  }
+  return query(columns);
+}
+
+const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -98,11 +135,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         { data: customCards, error: customErr },
         { data: colCards, error: colErr },
       ] = await Promise.all([
-        supabase
-          .from("tracked_master_sets")
-          .select("item_id, type, label, image, total_cards, subtitle, sort_order")
-          .eq("user_id", userId!)
-          .order("sort_order", { ascending: true }),
+        loadSets(userId!),
         supabase
           .from("owned_cards")
           .select("item_id, card_id")
@@ -156,6 +189,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         image:       row.image,
         totalCards:  row.total_cards,
         subtitle:    row.subtitle ?? undefined,
+        status:      row.status ?? undefined,
         ownedCards:  cardsByItem.get(row.item_id) ?? [],
         customCards: customByItem.get(row.item_id),
       }));
@@ -380,6 +414,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  function setStatus(id: string, status: SetStatus) {
+    setTrackedItems((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+    if (!user) return;
+    if (statusColumn === false) {
+      setSyncError("Set status isn't set up yet, so it won't be saved. Run supabase/set_status.sql in Supabase.");
+      return;
+    }
+    persist("setStatus", { kind: "update", table: "tracked_master_sets", values: { status }, match: { user_id: user.id, item_id: id } });
+  }
+
   function addCollectionCard(cardId: string) {
     setCollectionCardIds((prev) => {
       if (prev.includes(cardId)) return prev;
@@ -410,7 +454,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     <StoreContext.Provider value={{
       trackedItems, addItem, removeItem, toggleCard,
       isCardOwned, hasItem, updateTotal, reorderItems,
-      addCustomCard, removeCustomCard, updateItem,
+      addCustomCard, removeCustomCard, updateItem, setStatus,
       collectionCardIds, addCollectionCard, removeCollectionCard, isInCollection,
       syncError, clearSyncError: () => setSyncError(null), reportSyncError: setSyncError,
     }}>

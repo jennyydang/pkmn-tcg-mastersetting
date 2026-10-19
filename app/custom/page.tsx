@@ -10,7 +10,8 @@ import { useStore } from "@/lib/store";
 import { useConfirm } from "@/lib/confirm";
 import { useAuth } from "@/lib/auth";
 import ProgressBar from "@/app/components/ProgressBar";
-import { ChevronRightIcon, SearchIcon, TrophyIcon } from "@/app/components/Icons";
+import { CheckIcon, ChevronRightIcon, SearchIcon, TrophyIcon } from "@/app/components/Icons";
+import { successFeedback, tapFeedback } from "@/lib/haptics";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -36,7 +37,7 @@ function CustomSetView() {
   const id = useSearchParams().get("id") ?? "";
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { trackedItems, isCardOwned, toggleCard, addCustomCard, removeCustomCard, removeItem, updateItem } = useStore();
+  const { trackedItems, isCardOwned, toggleCard, addCustomCard, removeCustomCard, removeItem, updateItem, setStatus } = useStore();
   const confirm = useConfirm();
 
   const [filter, setFilter]     = useState<"all" | "owned" | "missing">("all");
@@ -161,6 +162,23 @@ function CustomSetView() {
             <TrophyIcon className="w-4 h-4" /> Custom Set Complete!
           </div>
         )}
+
+        {/* Your call on whether this set is done, whatever the count says. */}
+        <div className="mt-4 flex items-center gap-3">
+          <span className="text-sm text-gray-600 dark:text-gray-300">Status</span>
+          <div className="inline-flex p-1 rounded-full bg-gray-100 dark:bg-gray-900" role="radiogroup" aria-label="Status">
+            {(["ongoing", "complete"] as const).map((s) => {
+              const on = (tracked.status ?? "ongoing") === s;
+              return (
+                <button key={s} role="radio" aria-checked={on}
+                  onClick={() => { if (!on) { setStatus(id, s); if (s === "complete") successFeedback(); else tapFeedback(); } }}
+                  className={`px-4 min-h-[36px] rounded-full text-sm font-semibold capitalize transition-colors ${on ? (s === "complete" ? "bg-green-600 text-white shadow-sm" : "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm") : "text-gray-500 dark:text-gray-400"}`}>
+                  {s === "complete" && on && <CheckIcon className="w-4 h-4 inline -mt-0.5 mr-1" />}{s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Search to add cards */}

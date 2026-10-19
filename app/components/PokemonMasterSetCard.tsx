@@ -11,7 +11,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { TrackedMasterSet } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { tapFeedback } from "@/lib/haptics";
-import { CardsIcon, TrashIcon, TrophyIcon } from "./Icons";
+import { CardsIcon, CheckIcon, TrashIcon, TrophyIcon } from "./Icons";
 
 // Swipe a tile left on a touch screen to reveal Remove on its right.
 const ACTION_WIDTH = 96;
@@ -138,8 +138,18 @@ export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) 
         )}
         <div className="min-w-0">
           <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">{label}</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5">
             {type === "pokemon" ? "Master Set" : type === "artist" ? "Artist Collection" : type === "custom" ? "Custom Set" : (subtitle ?? "Set")}
+            {/* Custom sets carry the status you set (ongoing unless marked complete). */}
+            {type === "custom" && (
+              tracked.status === "complete" ? (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-semibold">
+                  <CheckIcon className="w-3 h-3" /> Complete
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-semibold">Ongoing</span>
+              )
+            )}
           </p>
         </div>
       </div>

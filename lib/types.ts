@@ -55,6 +55,8 @@ export interface CustomCardDef {
   setName: string;
 }
 
+export type SetStatus = "ongoing" | "complete";
+
 export interface TrackedMasterSet {
   type: "pokemon" | "set" | "artist" | "custom";
   id: string;        // Pokémon name  OR  set.id  OR  artist name  OR  uuid
@@ -64,4 +66,6 @@ export interface TrackedMasterSet {
   ownedCards: string[];
   subtitle?: string;
   customCards?: CustomCardDef[]; // only populated for type === "custom"
+  /** Custom sets: whether you're still collecting it or call it done (supabase/set_status.sql). */
+  status?: SetStatus;
 }
