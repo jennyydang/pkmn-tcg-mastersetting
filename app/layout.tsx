@@ -5,6 +5,7 @@ import { StoreProvider } from "@/lib/store";
 import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
 import HeaderActions from "./components/HeaderActions";
+import SyncErrorBanner from "./components/SyncErrorBanner";
 import { PokeBallIcon } from "./components/Icons";
 import Link from "next/link";
 
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <HeaderActions />
                 </div>
               </header>
+              <SyncErrorBanner />
               <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
                 {children}
               </main>
