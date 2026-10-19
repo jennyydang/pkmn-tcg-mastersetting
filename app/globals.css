@@ -98,7 +98,13 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 @media (hover: none) {
-  .tile:active { transform: scale(0.95); }
+  .tile:not(.no-press):active { transform: scale(0.95); }
+}
+
+/* Swipe-to-remove rows: no iOS link preview / callout when a finger rests on them. */
+.swipe-row, .swipe-row a {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
 }
 @media (hover: hover) and (pointer: fine) {
   .tile {

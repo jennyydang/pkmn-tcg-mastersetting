@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ownedCardIds } from "@/lib/variants";
 import { masterSetHref } from "@/lib/links";
 import { tiltHandlers } from "@/lib/motion";
@@ -10,7 +10,13 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TrackedMasterSet } from "@/lib/types";
 import { useStore } from "@/lib/store";
-import { CardsIcon, TrophyIcon } from "./Icons";
+import { tapFeedback } from "@/lib/haptics";
+import { CardsIcon, TrashIcon, TrophyIcon } from "./Icons";
+
+// Swipe a tile left on a touch screen to reveal Remove on its right.
+const ACTION_WIDTH = 96;
+// Only one tile stays swiped open at a time.
+const SWIPE_OPEN_EVENT = "pocketi-swipe-open";
 
 interface Props {
   tracked: TrackedMasterSet;
@@ -28,6 +34,73 @@ export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) 
   const complete = totalCards > 0 && owned >= totalCards;
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Swipe state: offset is how far the tile has slid left (≤ 0).
+  const [offset, setOffset] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const touch = useRef<{ x: number; y: number; base: number; axis: "x" | "y" | null } | null>(null);
+  const justSwiped = useRef(false);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const open = offset < 0 && !swiping;
+
+  // Close when another tile opens, or on a touch anywhere else.
+  useEffect(() => {
+    if (!open) return;
+    const onOtherOpen = (e: Event) => { if ((e as CustomEvent).detail !== id) setOffset(0); };
+    const onTouchOutside = (e: TouchEvent) => { if (!rowRef.current?.contains(e.target as Node)) setOffset(0); };
+    window.addEventListener(SWIPE_OPEN_EVENT, onOtherOpen);
+    document.addEventListener("touchstart", onTouchOutside, { passive: true });
+    return () => {
+      window.removeEventListener(SWIPE_OPEN_EVENT, onOtherOpen);
+      document.removeEventListener("touchstart", onTouchOutside);
+    };
+  }, [open, id]);
+
+  const swipeHandlers = isEditing ? {} : {
+    onTouchStart: (e: React.TouchEvent) => {
+      const t = e.touches[0];
+      touch.current = { x: t.clientX, y: t.clientY, base: offset, axis: null };
+      justSwiped.current = false;
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      const s = touch.current;
+      if (!s) return;
+      const t = e.touches[0];
+      const dx = t.clientX - s.x, dy = t.clientY - s.y;
+      if (!s.axis) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        s.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      }
+      if (s.axis !== "x") return;
+      justSwiped.current = true;
+      setSwiping(true);
+      // Follows the finger, with resistance past the button and to the right.
+      const raw = s.base + dx;
+      setOffset(raw > 0 ? raw / 4 : raw < -ACTION_WIDTH ? -ACTION_WIDTH + (raw + ACTION_WIDTH) / 4 : raw);
+    },
+    onTouchEnd: () => {
+      const s = touch.current;
+      touch.current = null;
+      if (s?.axis !== "x") return;
+      setSwiping(false);
+      setOffset((o) => {
+        const opening = o < -ACTION_WIDTH / 2;
+        if (opening && s.base === 0) {
+          tapFeedback();
+          window.dispatchEvent(new CustomEvent(SWIPE_OPEN_EVENT, { detail: id }));
+        }
+        return opening ? -ACTION_WIDTH : 0;
+      });
+    },
+  };
+  // A swipe (or tapping an open tile) shouldn't follow the link.
+  const onLinkClick = (e: React.MouseEvent) => {
+    if (justSwiped.current || offset < 0) {
+      e.preventDefault();
+      justSwiped.current = false;
+      setOffset(0);
+    }
+  };
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
@@ -100,12 +173,25 @@ export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) 
   return (
     <>
       <div
-        ref={setNodeRef}
+        ref={(node) => { setNodeRef(node); rowRef.current = node; }}
         style={style}
         {...interactionProps}
+        {...swipeHandlers}
         onContextMenu={(e) => e.preventDefault()}
-        className={`stagger-in relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm select-none ${isEditing ? "touch-none" : "tile touch-pan-y"}`}
+        className={`stagger-in relative rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm select-none overflow-hidden ${isEditing ? "touch-none bg-white dark:bg-gray-800" : "tile no-press swipe-row touch-pan-y bg-white dark:bg-gray-800"}`}
       >
+        {!isEditing && (
+          <button
+            onClick={() => { setOffset(0); setShowDeleteModal(true); }}
+            tabIndex={open ? 0 : -1}
+            aria-hidden={!open}
+            className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-1 bg-red-600 text-white text-xs font-semibold"
+            style={{ width: ACTION_WIDTH }}
+          >
+            <TrashIcon className="w-6 h-6" />
+            Remove
+          </button>
+        )}
         {isEditing && (
           <button
             onPointerDown={(e) => e.stopPropagation()}
@@ -122,7 +208,18 @@ export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) 
         {isEditing ? (
           <div className="p-5">{cardContent}</div>
         ) : (
-          <Link href={href} className="block p-5">{cardContent}</Link>
+          <Link
+            href={href}
+            onClick={onLinkClick}
+            draggable={false}
+            className="relative block p-5 bg-white dark:bg-gray-800"
+            style={{
+              transform: offset ? `translateX(${offset}px)` : undefined,
+              transition: swiping ? "none" : "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+            }}
+          >
+            {cardContent}
+          </Link>
         )}
       </div>
 
