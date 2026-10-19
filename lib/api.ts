@@ -94,6 +94,7 @@ interface RawCard {
   name: string;
   image?: string | null;
   rarity?: string | null;
+  illustrator?: string | null;
   set: { id: string };
   variants?: Partial<Record<CardVariant, boolean>> | null;
   pricing?: {
@@ -101,7 +102,7 @@ interface RawCard {
   } | null;
 }
 
-const CARD_FIELDS = "id localId name image rarity set { id } variants { normal reverse holo firstEdition }";
+const CARD_FIELDS = "id localId name image rarity illustrator set { id } variants { normal reverse holo firstEdition }";
 
 // ── Set catalog (every set, fetched once per page load) ─────────────────────
 
@@ -179,6 +180,7 @@ function toCard(raw: RawCard, set: PokemonSet): PokemonCard {
     name:   raw.name,
     number: raw.localId,
     rarity: raw.rarity && raw.rarity !== "None" ? raw.rarity : undefined,
+    illustrator: raw.illustrator ?? undefined,
     images: { small: cardImage(raw, set.id, "low"), large: cardImage(raw, set.id, "high") },
     set,
     variants: raw.variants ? VARIANT_ORDER.filter((v) => raw.variants![v]) : undefined,
@@ -207,7 +209,7 @@ function compareCards(a: PokemonCard, b: PokemonCard) {
 
 // TCGdex name/illustrator filters match substrings ("mew" finds "Mewtwo");
 // keep only whole-word matches so a master set holds just that Pokémon.
-function matchesWord(text: string | null | undefined, word: string) {
+export function matchesWord(text: string | null | undefined, word: string) {
   if (!text) return false;
   const escaped = word.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, "iu").test(text);
@@ -221,9 +223,9 @@ async function cardsByName(name: string): Promise<RawCard[]> {
   return cards;
 }
 
-async function cardsByIllustrator(artist: string): Promise<(RawCard & { illustrator?: string })[]> {
-  const { cards } = await gql<{ cards: (RawCard & { illustrator?: string })[] }>(
-    `query ($artist: String) { cards(filters: { illustrator: $artist }) { ${CARD_FIELDS} illustrator } }`,
+async function cardsByIllustrator(artist: string): Promise<RawCard[]> {
+  const { cards } = await gql<{ cards: RawCard[] }>(
+    `query ($artist: String) { cards(filters: { illustrator: $artist }) { ${CARD_FIELDS} } }`,
     { artist }
   );
   return cards;

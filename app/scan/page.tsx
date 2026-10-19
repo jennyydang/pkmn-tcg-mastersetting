@@ -17,6 +17,8 @@ import CardImage from "@/app/components/CardImage";
 import { CheckIcon, StarIcon } from "@/app/components/Icons";
 import { CameraStep, PickStep } from "./ScanSteps";
 import BatchScan from "./BatchScan";
+import AddToSetsSheet from "@/app/components/AddToSetsSheet";
+import { setFitsCard, setsHoldingCard } from "@/lib/setMembership";
 
 type Step =
   | { kind: "camera" }
@@ -107,7 +109,10 @@ function SingleScan({ toggle }: { toggle: React.ReactNode }) {
 }
 
 function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loading: boolean; onScanAnother: () => void }) {
-  const { addCollectionCard, isInCollection } = useStore();
+  const { addCollectionCard, isInCollection, trackedItems } = useStore();
+  const [setsOpen, setSetsOpen] = useState<{ intro?: string } | null>(null);
+  const fitsSomeSet = trackedItems.some((t) => setFitsCard(t, card));
+  const setCount = setsHoldingCard(trackedItems, card.id).length;
   const { isWanted, setWant } = useCardData();
   const versions = cardVariants(card);
   const [variant, setVariant] = useState(versions[0]);
@@ -164,7 +169,7 @@ function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loadi
       </section>
 
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => { addCollectionCard(card.id); successFeedback(); }} disabled={inCollection}
+        <button onClick={() => { addCollectionCard(card.id); successFeedback(); if (fitsSomeSet) setSetsOpen({ intro: "Added to your collection" }); }} disabled={inCollection}
           className="flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-green-600 text-white text-sm font-semibold transition-colors">
           {inCollection ? <><CheckIcon className="w-4 h-4" /> In collection</> : "Add to collection"}
         </button>
@@ -173,6 +178,14 @@ function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loadi
           <StarIcon className="w-4 h-4" filled={isWanted(wantKey)} /> {isWanted(wantKey) ? "On want list" : "Want"}
         </button>
       </div>
+
+      {fitsSomeSet && (
+        <button onClick={() => setSetsOpen({})}
+          className="w-full min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200">
+          {setCount > 0 ? `In ${setCount} of your ${setCount === 1 ? "set" : "sets"} · Change` : "Add to your master sets"}
+        </button>
+      )}
+      {setsOpen && <AddToSetsSheet card={card} intro={setsOpen.intro} onClose={() => setSetsOpen(null)} />}
 
       <div className="flex items-center justify-between">
         <button onClick={onScanAnother} className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 min-h-[44px]">

@@ -26,6 +26,7 @@ export interface PokemonCard {
   name: string;
   number: string;
   rarity?: string;
+  illustrator?: string;
   images: {
     small: string;
     large: string;

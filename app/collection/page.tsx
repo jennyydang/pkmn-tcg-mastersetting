@@ -16,6 +16,8 @@ import { staggerStyle } from "@/lib/motion";
 import { CameraIcon, CardsIcon, ChevronRightIcon, SearchIcon, SwapIcon, TrendingUpIcon } from "@/app/components/Icons";
 import { useCardData } from "@/lib/cardData";
 import { extrasFromDetails } from "@/lib/trade";
+import { setFitsCard, setsHoldingCard } from "@/lib/setMembership";
+import AddToSetsSheet from "@/app/components/AddToSetsSheet";
 
 export default function CollectionPage() {
   const router = useRouter();
@@ -30,6 +32,7 @@ export default function CollectionPage() {
   const [priceCard, setPriceCard]       = useState<PokemonCard | null>(null);
   const [priceOpen, setPriceOpen]       = useState(false);
   const [priceLoading, setPriceLoading] = useState(false);
+  const [setsFor, setSetsFor]           = useState<{ card: PokemonCard; intro?: string } | null>(null);
 
 
   const [query, setQuery]               = useState("");
@@ -107,6 +110,8 @@ export default function CollectionPage() {
     setQuery("");
     setSearchResults([]);
     setSearchOpen(false);
+    // Offer to count it toward any tracked sets it belongs to.
+    if (trackedItems.some((t) => setFitsCard(t, card))) setSetsFor({ card, intro: "Added to your collection" });
   }
 
   function handleRemove(card: PokemonCard) {
@@ -325,12 +330,27 @@ export default function CollectionPage() {
                 height={204}
                 className="w-full h-auto block rounded-lg shadow-sm"
               />
+
+              {(() => {
+                const n = setsHoldingCard(trackedItems, card.id).length;
+                return (
+                  <button
+                    onClick={() => setSetsFor({ card })}
+                    aria-label={`Add ${card.name} to sets${n ? `, in ${n} ${n === 1 ? "set" : "sets"}` : ""}`}
+                    className={`mt-1 w-full min-h-[32px] rounded-lg text-[11px] font-semibold transition-colors ${n ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                  >
+                    {n ? `In ${n} ${n === 1 ? "set" : "sets"}` : "+ Add to sets"}
+                  </button>
+                );
+              })()}
             </div>
           ))}
         </div>
       )}
 
       <CollectionMasterSets items={trackedItems} />
+
+      {setsFor && <AddToSetsSheet card={setsFor.card} intro={setsFor.intro} onClose={() => setSetsFor(null)} />}
 
       {/* Price modal */}
       {priceOpen && (
