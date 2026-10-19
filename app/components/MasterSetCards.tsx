@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { getCardsByIds } from "@/lib/api";
-import { useIncludeVariants } from "@/lib/prefs";
+import { useCardView, useIncludeVariants } from "@/lib/prefs";
 import { CardVariant, PokemonCard } from "@/lib/types";
 import { VARIANT_LABELS, cardVariants, ownedKey, variantPrice } from "@/lib/variants";
 import CardGrid, { CardTile } from "./CardGrid";
 import { staggerStyle } from "@/lib/motion";
+import BinderView from "./BinderView";
+import QuickAdd from "./QuickAdd";
 
 interface Props {
   cards: PokemonCard[];
@@ -15,6 +17,8 @@ interface Props {
   onToggle: (key: string) => void;
   /** Show each card's set in the What's left list (Pokémon and artist pages span sets). */
   showSetNames?: boolean;
+  /** Offer Quick add by card number (set pages only; numbers repeat across sets). */
+  quickAdd?: boolean;
 }
 
 type Filter = "all" | "owned" | "missing";
@@ -26,9 +30,10 @@ interface MissingEntry {
 }
 
 // Filters, What's left and the card grid for a set, Pokémon or artist page.
-export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetNames = false }: Props) {
+export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetNames = false, quickAdd = false }: Props) {
   const [includeVariants] = useIncludeVariants();
   const [filter, setFilter] = useState<Filter>("all");
+  const [view, setView] = useCardView();
   const owned = useMemo(() => new Set(ownedKeys), [ownedKeys]);
 
   // With variants on, every printed version is its own tile (labelled when a card
@@ -60,21 +65,39 @@ export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetName
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 mb-5" role="group" aria-label="Filter cards">
-        {(["all", "owned", "missing"] as const).map((f) => (
+      {quickAdd && <QuickAdd cards={cards} owned={owned} onToggle={onToggle} />}
+
+      <div className="flex flex-wrap items-center gap-2 mb-5">
+        {/* A binder shows every pocket in order, so filters only apply to the grid. */}
+        {view === "grid" && <div className="flex flex-wrap gap-2" role="group" aria-label="Filter cards">{(["all", "owned", "missing"] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)}
             aria-pressed={filter === f}
             className={`px-4 py-2 min-h-[44px] rounded-full text-sm font-medium transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${filter === f ? "bg-blue-600 text-white shadow-sm" : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-400"}`}>
             {f === "all" ? `All (${tiles.length})` : f === "owned" ? `Owned (${ownedCount})` : `Missing (${tiles.length - ownedCount})`}
           </button>
-        ))}
+        ))}</div>}
+        {view === "binder" && (
+          <p className="text-sm text-gray-500 dark:text-gray-400">{ownedCount} of {tiles.length} pockets filled</p>
+        )}
+        <div className="ml-auto flex rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0.5" role="radiogroup" aria-label="View">
+          {(["grid", "binder"] as const).map((v) => (
+            <button key={v} role="radio" aria-checked={view === v} onClick={() => setView(v)}
+              className={`px-4 min-h-[40px] rounded-full text-sm font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                view === v ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900" : "text-gray-600 dark:text-gray-300"
+              }`}>
+              {v}
+            </button>
+          ))}
+        </div>
       </div>
 
       {missing.length > 0 && (
         <WhatsLeft entries={missing} includeVariants={includeVariants} showSetNames={showSetNames} />
       )}
 
-      {filtered.length > 0 ? (
+      {view === "binder" ? (
+        <BinderView tiles={tiles} onToggle={onToggle} />
+      ) : filtered.length > 0 ? (
         <CardGrid tiles={filtered} onToggle={onToggle} />
       ) : (
         <div className="py-16 text-center text-gray-400 dark:text-gray-600"><p className="text-lg">No cards to show</p></div>
