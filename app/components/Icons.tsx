@@ -111,3 +111,15 @@ export function CheckCircleIcon({ className }: IconProps) {
 export function CardsIcon({ className }: IconProps) {
   return <OutlineIcon className={className} strokeWidth={1.5} d="M6 6.878V6a2.25 2.25 0 012.25-2.25h7.5A2.25 2.25 0 0118 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 004.5 9v.878m13.5-3A2.25 2.25 0 0119.5 9v.878m0 0a2.246 2.246 0 00-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0121 12v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6c0-.98.626-1.813 1.5-2.122" />;
 }
+
+export function HomeIcon({ className }: IconProps) {
+  return <OutlineIcon className={className} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />;
+}
+
+export function TrendingUpIcon({ className }: IconProps) {
+  return <OutlineIcon className={className} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />;
+}
+
+export function UserIcon({ className }: IconProps) {
+  return <OutlineIcon className={className} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />;
+}

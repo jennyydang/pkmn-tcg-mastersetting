@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
 import { CardDataProvider } from "@/lib/cardData";
 import HeaderActions from "./components/HeaderActions";
+import BottomNav from "./components/BottomNav";
 import SyncErrorBanner from "./components/SyncErrorBanner";
 import AnnouncementBanner from "./components/AnnouncementBanner";
 import { PokeBallIcon } from "./components/Icons";
@@ -43,16 +44,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
                   <Link href="/" className="flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100 hover:opacity-80 transition-opacity">
                     <PokeBallIcon className="w-7 h-7 text-red-500" />
-                    <span className="hidden sm:block text-sm">{APP_NAME}</span>
+                    <span className="text-sm">{APP_NAME}</span>
                   </Link>
                   <HeaderActions />
                 </div>
               </header>
               <AnnouncementBanner />
               <SyncErrorBanner />
-              <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+              <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-[calc(2rem+env(safe-area-inset-bottom))]">
                 {children}
               </main>
+              <BottomNav />
             </CardDataProvider>
             </StoreProvider>
           </AuthProvider>
