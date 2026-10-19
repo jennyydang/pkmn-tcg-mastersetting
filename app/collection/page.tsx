@@ -10,11 +10,11 @@ import { useAuth } from "@/lib/auth";
 import { getCardsByIds, getCard, getCardsForArtist, getCardsForPokemon, getCardsForSet, searchCards } from "@/lib/api";
 import { CardVariant, PokemonCard, TrackedMasterSet } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
-import { cardVariants, ownedCardIds, parseOwnedKey } from "@/lib/variants";
+import { cardVariants, ownedCardIds, ownedKey, parseOwnedKey } from "@/lib/variants";
 import VersionPicker from "@/app/components/VersionPicker";
 import { staggerStyle, tiltHandlers } from "@/lib/motion";
 import { CardsIcon, ChevronRightIcon, SearchIcon, SwapIcon, TrendingUpIcon } from "@/app/components/Icons";
-import { useCardData } from "@/lib/cardData";
+import { DEFAULT_DETAILS, useCardData } from "@/lib/cardData";
 import { extrasFromDetails } from "@/lib/trade";
 import { setFitsCard, setsHoldingCard } from "@/lib/setMembership";
 import AddToSetsSheet, { addedIntro } from "@/app/components/AddToSetsSheet";
@@ -25,7 +25,7 @@ export default function CollectionPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { collectionCardIds, removeCollectionCard, isInCollection, trackedItems, toggleCard } = useStore();
-  const { details } = useCardData();
+  const { details, available, saveDetails } = useCardData();
   const addToCollection = useAddToCollection();
   const confirm = useConfirm();
   const extraCount = extrasFromDetails(details).reduce((n, e) => n + e.count, 0);
@@ -154,9 +154,20 @@ export default function CollectionPage() {
     else finishAdd(card);
   }
 
-  function finishAdd(card: PokemonCard, variant?: CardVariant) {
+  function finishAdd(card: PokemonCard, variants?: CardVariant[]) {
     setVersionFor(null);
-    const checked = addToCollection(card, variant);
+    const checkedSets = new Set<string>();
+    for (const v of variants ?? [undefined]) for (const id of addToCollection(card, v)) checkedSets.add(id);
+    const checked = checkedSets.size;
+    // Record each version picked (so the card's dialog shows them, even when no
+    // master set includes the card); existing copy details are left alone.
+    if (variants && available) {
+      for (const v of variants) {
+        const key = ownedKey(card, v);
+        if (!details.has(key)) saveDetails(key, DEFAULT_DETAILS);
+      }
+    }
+    const variant = variants?.[0];
     cardCache.current.set(card.id, card);
     // Optimistically prepend to cards
     setCards((prev) => {
@@ -402,7 +413,7 @@ export default function CollectionPage() {
       )}
 
 
-      {versionFor && <VersionPicker card={versionFor} onPick={(v) => finishAdd(versionFor, v)} onCancel={() => setVersionFor(null)} />}
+      {versionFor && <VersionPicker card={versionFor} onPick={(vs) => finishAdd(versionFor, vs)} onCancel={() => setVersionFor(null)} />}
       {setsFor && <AddToSetsSheet card={setsFor.card} intro={setsFor.intro} initialVariant={setsFor.variant} onClose={() => setSetsFor(null)} />}
 
       {/* Price modal */}

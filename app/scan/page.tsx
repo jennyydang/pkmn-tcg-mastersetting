@@ -173,7 +173,7 @@ function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loadi
       </section>
 
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => { const checked = addToCollection(card, variant); successFeedback(); if (fitsSomeSet) setSetsOpen({ intro: addedIntro(checked) }); }} disabled={inCollection}
+        <button onClick={() => { const checked = addToCollection(card, variant).length; successFeedback(); if (fitsSomeSet) setSetsOpen({ intro: addedIntro(checked) }); }} disabled={inCollection}
           className="flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-green-600 text-white text-sm font-semibold transition-colors">
           {inCollection ? <><CheckIcon className="w-4 h-4" /> In collection</> : "Add to collection"}
         </button>

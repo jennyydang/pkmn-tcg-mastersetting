@@ -12,14 +12,14 @@ import { CardVariant, PokemonCard } from "./types";
  * includes it: its set, the Pokémon's and artist's master sets, and custom sets
  * that list it. With a `variant` that version is checked; without one, sets
  * where some version is already checked are left alone and the others get the
- * card's base version. Returns how many sets were checked.
+ * card's base version. Returns the IDs of the sets it was checked off in.
  */
 export function useAddToCollection() {
   const { addCollectionCard, trackedItems, toggleCard } = useStore();
 
   return useCallback((card: PokemonCard, variant?: CardVariant) => {
     addCollectionCard(card.id);
-    let checked = 0;
+    const checked: string[] = [];
     for (const t of trackedItems) {
       const fits = t.type === "custom" ? (t.customCards ?? []).some((c) => c.id === card.id) : setFitsCard(t, card);
       if (!fits) continue;
@@ -30,7 +30,7 @@ export function useAddToCollection() {
         : t.ownedCards.some((k) => parseOwnedKey(k).cardId === card.id);
       if (alreadyChecked) continue;
       toggleCard(t.id, key);
-      checked++;
+      checked.push(t.id);
     }
     return checked;
   }, [addCollectionCard, trackedItems, toggleCard]);
@@ -61,11 +61,12 @@ export function useAddCopies() {
       merged.set(key, prev ? { ...prev, count: prev.count + item.count } : item);
     }
 
-    let setsTicked = 0;
+    // Distinct sets, so two versions checked in one set count once.
+    const setsTicked = new Set<string>();
     const saves: Promise<boolean>[] = [];
     for (const [key, { card, variant, count }] of merged) {
       const ownedBefore = isInCollection(card.id) || trackedItems.some((t) => t.ownedCards.includes(key));
-      setsTicked += addToCollection(card, variant);
+      for (const id of addToCollection(card, variant)) setsTicked.add(id);
       // Copies of this version: what was saved, else one if you already had it.
       const existing = details.get(key);
       const quantity = (existing?.quantity ?? (ownedBefore ? 1 : 0)) + count;
@@ -74,6 +75,6 @@ export function useAddCopies() {
       }
     }
     await Promise.all(saves);
-    return { versions: merged.size, setsTicked };
+    return { versions: merged.size, setsTicked: setsTicked.size };
   }, [addToCollection, isInCollection, trackedItems, available, details, saveDetails]);
 }
