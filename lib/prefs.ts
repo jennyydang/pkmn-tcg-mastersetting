@@ -58,3 +58,10 @@ export type ScanMode = "single" | "batch";
 export function useScanMode() {
   return usePref<ScanMode>("pocketi-scan-mode", "single", ["single", "batch"]);
 }
+
+export type CollectionSort = "recent" | "name" | "value-desc" | "value-asc" | "set" | "release";
+
+/** How My Collection is ordered. */
+export function useCollectionSort() {
+  return usePref<CollectionSort>("pocketi-collection-sort", "recent", ["recent", "name", "value-desc", "value-asc", "set", "release"]);
+}

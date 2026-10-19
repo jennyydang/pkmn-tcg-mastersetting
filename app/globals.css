@@ -22,6 +22,25 @@ body {
   color: var(--foreground);
 }
 
+/* Interaction basics. Tailwind v4 gives buttons the default arrow cursor; show
+   the hand on everything clickable, "not allowed" on disabled controls, stop
+   double-tap zoom on quick taps (iOS), and keep card images from being dragged. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="radio"], [role="checkbox"], [role="option"], [role="tab"],
+  select:not(:disabled), summary, label:has(input, select), input[type="file"],
+  input[type="checkbox"], input[type="radio"] {
+    cursor: pointer;
+  }
+  button:disabled, select:disabled, input:disabled, [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+  button, a, [role="button"], select, label { touch-action: manipulation; }
+  img { -webkit-user-drag: none; }
+  ::selection { background: rgb(37 99 235 / 0.22); }
+}
+
 /* WCAG 2.2 — enhanced focus indicator (2.4.11 / 2.4.13) */
 :focus-visible {
   outline: 3px solid #2563eb;

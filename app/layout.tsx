@@ -12,6 +12,7 @@ import SyncErrorBanner from "./components/SyncErrorBanner";
 import AnnouncementBanner from "./components/AnnouncementBanner";
 import OfflineBanner from "./components/OfflineBanner";
 import PullToRefresh from "./components/PullToRefresh";
+import HoverTitles from "./components/HoverTitles";
 import AppLogo from "./components/AppLogo";
 import Link from "next/link";
 import { APP_NAME } from "@/lib/appInfo";
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <PullToRefresh>{children}</PullToRefresh>
               </main>
               <BottomNav />
+              <HoverTitles />
             </CardDataProvider>
             </StoreProvider>
           </AuthProvider>

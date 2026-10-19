@@ -20,6 +20,8 @@ import { setFitsCard, setsHoldingCard } from "@/lib/setMembership";
 import AddToSetsSheet, { addedIntro } from "@/app/components/AddToSetsSheet";
 import { useAddToCollection } from "@/lib/addCopies";
 import { useCollectionValue } from "@/lib/collectionValue";
+import { useCollectionSort } from "@/lib/prefs";
+import CollectionFilters, { CollectionFilter, NO_FILTER, applyCollectionView } from "@/app/components/CollectionFilters";
 import { useConfirm } from "@/lib/confirm";
 
 export default function CollectionPage() {
@@ -29,6 +31,8 @@ export default function CollectionPage() {
   const { details, available, saveDetails } = useCardData();
   const addToCollection = useAddToCollection();
   const { valuation } = useCollectionValue();
+  const [filter, setFilter] = useState<CollectionFilter>(NO_FILTER);
+  const [sort, setSort] = useCollectionSort();
   const confirm = useConfirm();
   const extraCount = extrasFromDetails(details).reduce((n, e) => n + e.count, 0);
 
@@ -219,6 +223,23 @@ export default function CollectionPage() {
 
   const ownedCount = ownedIdsKey ? ownedIdsKey.split("\n").length : 0;
 
+  // A card's value for your copies (all versions, condition-adjusted), for sorting.
+  const valueByCard = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!valuation) return map;
+    for (const key of valuation.keys) {
+      const unit = valuation.unitValue(key);
+      if (unit == null) continue;
+      const id = parseOwnedKey(key).cardId;
+      map.set(id, (map.get(id) ?? 0) + unit * valuation.quantity(key));
+    }
+    return map;
+  }, [valuation]);
+  const shownCards = useMemo(
+    () => applyCollectionView(cards, filter, sort, (c) => valueByCard.get(c.id)),
+    [cards, filter, sort, valueByCard]
+  );
+
   if (authLoading || !user) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -364,6 +385,13 @@ export default function CollectionPage() {
         </button>
       </form>
 
+      {cards.length > 0 && (
+        <>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Your cards</h2>
+          <CollectionFilters cards={cards} filter={filter} onFilter={setFilter} sort={sort} onSort={setSort} shownCount={shownCards.length} />
+        </>
+      )}
+
       {/* Card grid */}
       {loading && cards.length === 0 ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
@@ -375,6 +403,11 @@ export default function CollectionPage() {
             />
           ))}
         </div>
+      ) : cards.length > 0 && shownCards.length === 0 ? (
+        <div className="py-16 text-center text-gray-500 dark:text-gray-400">
+          <p className="font-medium">No cards match</p>
+          <button onClick={() => setFilter(NO_FILTER)} className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">Clear filters</button>
+        </div>
       ) : cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
           <CardsIcon className="w-12 h-12" />
@@ -383,7 +416,7 @@ export default function CollectionPage() {
         </div>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
-          {cards.map((card, i) => (
+          {shownCards.map((card, i) => (
             <div key={card.id} style={staggerStyle(i)} className="stagger-in relative">
               {/* Remove button */}
               <button
