@@ -160,6 +160,12 @@ function compareCards(a: PokemonCard, b: PokemonCard) {
 
 // TCGdex name/illustrator filters match substrings ("mew" finds "Mewtwo");
 // keep only whole-word matches so a master set holds just that Pokémon.
+/** Whether a search matched this card by its artist rather than its name. */
+export function artistMatch(card: PokemonCard, query: string) {
+  const q = query.trim();
+  return !!card.illustrator && q.length >= 3 && matchesWord(card.illustrator, q) && !matchesWord(card.name, q);
+}
+
 export function matchesWord(text: string | null | undefined, word: string) {
   if (!text) return false;
   const escaped = word.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -335,7 +341,15 @@ async function searchEnglishCards(trimmed: string): Promise<PokemonCard[]> {
       (c) => normalizeNumber(c.number) === cardNumber && (isNaN(totalNum) || c.set.printedTotal === totalNum)
     );
   } else {
-    cards = await toCards(await cardsByName(trimmed));
+    // A name, or an artist ("Mitsuhiro Arita", "Arita"): cards named it come
+    // first, then cards the artist drew. Each list is newest first.
+    const [named, drawn] = await Promise.all([
+      cardsByName(trimmed).then(toCards),
+      /[a-z]{3}/i.test(trimmed) ? getCardsForArtist(trimmed).catch(() => []) : Promise.resolve([]),
+    ]);
+    const first = named.sort((a, b) => compareCards(b, a)).slice(0, 20);
+    const ids = new Set(first.map((c) => c.id));
+    return [...first, ...drawn.filter((c) => !ids.has(c.id)).sort((a, b) => compareCards(b, a)).slice(0, 20)];
   }
 
   return cards.sort((a, b) => compareCards(b, a)).slice(0, 20);

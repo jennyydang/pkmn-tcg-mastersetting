@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { searchCards, getCard } from "@/lib/api";
+import { searchCards, getCard, artistMatch } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
 import CollectionEditSheet from "@/app/components/CollectionEditSheet";
@@ -177,7 +177,7 @@ function CustomSetView() {
                 onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
                 onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
                 onKeyDown={(e) => { if (e.key === "Enter") { if (debounceRef.current) clearTimeout(debounceRef.current); handleSearch(query); } }}
-                placeholder="Search by name or card number (e.g. 025, 25/102)…"
+                placeholder="Search by name, artist or number (e.g. 025, 25/102)…"
                 aria-label="Search cards by name or card number to add to this set"
                 aria-controls="card-search-results"
                 aria-expanded={searchOpen && searchResults.length > 0}
@@ -200,7 +200,7 @@ function CustomSetView() {
                         <Image src={card.images.small} alt="" width={36} height={50} className="object-contain shrink-0 rounded" unoptimized />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{card.name}</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{card.set.name} #{card.number}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{card.set.name} #{card.number}{artistMatch(card, query) && ` · Illus. ${card.illustrator}`}</p>
                         </div>
                         {already
                           ? <span className="text-xs text-green-700 dark:text-green-400 font-medium shrink-0">Added</span>

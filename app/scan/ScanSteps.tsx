@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { searchCards } from "@/lib/api";
+import { searchCards, artistMatch } from "@/lib/api";
 import { ScanText } from "@/lib/cardScan";
 import { PokemonCard } from "@/lib/types";
 import { tapFeedback } from "@/lib/haptics";
@@ -134,7 +134,7 @@ export function PickStep({ scan, candidates, onPick, onRetry, retryLabel = "Scan
       <form onSubmit={search} className="flex gap-2">
         <div className="flex-1 flex items-center gap-2 px-3 min-h-[44px] rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
           <SearchIcon className="w-4 h-4 text-gray-400" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Name or number, e.g. 025/165"
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Name, artist or number, e.g. 025/165"
             className="flex-1 min-w-0 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100" aria-label="Search cards" />
         </div>
         <button type="submit" className="px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold">{searching ? "…" : "Search"}</button>
@@ -147,6 +147,7 @@ export function PickStep({ scan, candidates, onPick, onRetry, retryLabel = "Scan
               <CardImage src={card.images.small} alt={card.name} width={146} height={204} className="w-full h-auto rounded-lg shadow-sm" />
               <span className="block mt-1 text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{card.name}</span>
               <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{card.set.name} · #{card.number}</span>
+              {artistMatch(card, query) && <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">Illus. {card.illustrator}</span>}
             </button>
           </li>
         ))}

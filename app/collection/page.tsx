@@ -7,7 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
-import { getCardsByIds, getCard, getCardsForArtist, getCardsForPokemon, getCardsForSet, searchCards } from "@/lib/api";
+import { getCardsByIds, getCard, getCardsForArtist, getCardsForPokemon, getCardsForSet, searchCards, artistMatch } from "@/lib/api";
 import { CardVariant, PokemonCard, TrackedMasterSet } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
 import { cardVariants, ownedCardIds, ownedKey, parseOwnedKey } from "@/lib/variants";
@@ -303,7 +303,7 @@ export default function CollectionPage() {
               onChange={handleSearchChange}
               onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
               onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
-              placeholder="Search by name or card number…"
+              placeholder="Search by name, artist or number…"
               aria-label="Search cards to add to collection"
               aria-controls="collection-search-results"
               aria-expanded={searchOpen && searchResults.length > 0}
@@ -339,7 +339,7 @@ export default function CollectionPage() {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{card.name}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{card.set.name} #{card.number}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{card.set.name} #{card.number}{artistMatch(card, query) && ` · Illus. ${card.illustrator}`}</p>
                       </div>
                       {inCol
                         ? <span className="text-xs text-green-700 dark:text-green-400 font-medium shrink-0">Added</span>
