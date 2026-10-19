@@ -156,7 +156,6 @@ export default function Home() {
                     index={i}
                     tracked={tracked}
                     isEditing={isEditing}
-                    onActivateEdit={() => setIsEditing(true)}
                   />
                 ))}
               </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ownedCardIds } from "@/lib/variants";
 import { masterSetHref } from "@/lib/links";
 import { tiltHandlers } from "@/lib/motion";
@@ -15,12 +15,11 @@ import { CardsIcon, TrophyIcon } from "./Icons";
 interface Props {
   tracked: TrackedMasterSet;
   isEditing: boolean;
-  onActivateEdit: () => void;
   /** Position in the grid, for the cascading entrance. */
   index?: number;
 }
 
-export default function MasterSetCard({ tracked, isEditing, onActivateEdit, index = 0 }: Props) {
+export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) {
   const { removeItem } = useStore();
   const { id, label, image, totalCards, ownedCards, type, subtitle } = tracked;
   // Count cards, not versions: a card with several owned versions counts once.
@@ -29,24 +28,6 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit, inde
   const complete = totalCards > 0 && owned >= totalCards;
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  // Long-press (only when not in edit mode) → activates edit mode
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const didMove = useRef(false);
-
-  function handleLongPressDown() {
-    didMove.current = false;
-    longPressTimer.current = setTimeout(() => {
-      if (!didMove.current) onActivateEdit();
-    }, 500);
-  }
-  function handleLongPressMove() {
-    didMove.current = true;
-    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-  }
-  function handleLongPressUp() {
-    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-  }
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
@@ -61,18 +42,9 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit, inde
     "--i": index,
   } as React.CSSProperties;
 
-  // When editing: spread dnd-kit listeners for drag.
-  // When not editing: attach long-press handlers to trigger jiggle mode.
-  // These must NOT be mixed — dnd-kit's onPointerDown would be overridden
-  // if both are applied to the same element at the same time.
-  const interactionProps = isEditing
-    ? { ...attributes, ...listeners }
-    : {
-        onPointerDown: handleLongPressDown,
-        onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => { handleLongPressMove(); tiltHandlers.onPointerMove(e); },
-        onPointerLeave: tiltHandlers.onPointerLeave,
-        onPointerUp: handleLongPressUp,
-      };
+  // Editing (via the Edit Sets button): dnd-kit drag listeners. Otherwise the
+  // mouse tilt. Kept separate so neither overrides the other's pointer handlers.
+  const interactionProps = isEditing ? { ...attributes, ...listeners } : tiltHandlers;
 
   const href = masterSetHref(tracked);
 
