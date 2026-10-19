@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCardsForPokemon } from "@/lib/api";
+import { getCardsForPokemon, thumbnail } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -44,7 +44,7 @@ export default function PokemonMasterSetPage({ params }: Props) {
         const fetched = await getCardsForPokemon(name);
         setCards(fetched);
         if (!hasItem(name) && fetched.length > 0) {
-          addItem({ type: "pokemon", id: name, label: name, image: fetched[fetched.length - 1].images.small, totalCards: fetched.length, ownedCards: [], subtitle: "All cards across every set" });
+          addItem({ type: "pokemon", id: name, label: name, image: thumbnail(fetched), totalCards: fetched.length, ownedCards: [], subtitle: "All cards across every set" });
         }
         if (fetched.length > 0) updateTotal(name, fetched.length);
       } catch (e) {

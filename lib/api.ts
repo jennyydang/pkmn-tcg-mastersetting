@@ -1,29 +1,226 @@
-import { PokemonCard, PokemonSet } from "./types";
+import { PokemonCard, PokemonSet, TCGPlayerPrice } from "./types";
+import { legacyImageUrl } from "./legacyIds";
 
-const BASE_URL = "https://api.pokemontcg.io/v2";
+// Card data comes from TCGdex (https://tcgdex.dev). GraphQL is used for searches and
+// card lists (one request returns each card's set); REST is used for single cards
+// because only the REST card includes prices.
+const REST_URL    = "https://api.tcgdex.net/v2/en";
+const GRAPHQL_URL = "https://api.tcgdex.net/v2/graphql";
+
+// Shown for the few TCGdex cards that have no scan.
+export const PLACEHOLDER_IMAGE = "/card-placeholder.svg";
+
+// TCGdex also lists Pokémon TCG Pocket (digital-only) sets under this series.
+const POCKET_SERIE_ID = "tcgp";
 
 const MAX_ATTEMPTS = 4;
 
-// The API frequently answers 429/5xx or drops the connection; those are retried
-// with backoff (1s, 2s, 4s). Other errors (e.g. a 400 from a bad query) fail at once.
-async function apiFetch<T>(path: string): Promise<T> {
+// Retries 429/5xx responses and dropped connections with backoff (1s, 2s, 4s).
+// Other errors (e.g. a 404 for an unknown card) fail at once.
+async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
   for (let attempt = 1; ; attempt++) {
     let res: Response;
     try {
-      res = await fetch(`${BASE_URL}${path}`, {
-        headers: { "Content-Type": "application/json" },
-        next: { revalidate: 3600 },
-      });
+      res = await fetch(url, init);
     } catch (e) {
       if (attempt >= MAX_ATTEMPTS) throw e;
       await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
       continue;
     }
-    if (res.ok) return res.json();
+    if (res.ok) return res;
     const retryable = res.status === 429 || res.status >= 500;
-    if (!retryable || attempt >= MAX_ATTEMPTS) throw new Error(`API error: ${res.status}`);
+    if (!retryable || attempt >= MAX_ATTEMPTS) throw new ApiError(res.status);
     await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
   }
+}
+
+export class ApiError extends Error {
+  constructor(public status: number) {
+    super(`API error: ${status}`);
+  }
+}
+
+async function restFetch<T>(path: string): Promise<T> {
+  const res = await fetchWithRetry(`${REST_URL}${path}`);
+  return res.json();
+}
+
+async function gql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+  const res = await fetchWithRetry(GRAPHQL_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, variables }),
+  });
+  const body = await res.json();
+  if (body.errors?.length) throw new Error(`API error: ${body.errors[0].message}`);
+  return body.data;
+}
+
+// ── Raw TCGdex shapes ───────────────────────────────────────────────────────
+
+interface RawSet {
+  id: string;
+  name: string;
+  releaseDate: string;
+  logo: string | null;
+  symbol: string | null;
+  serie: { id: string; name: string };
+  cardCount: { official: number; total: number };
+}
+
+interface RawTcgplayerPrice {
+  productId?: number;
+  lowPrice?: number | null;
+  midPrice?: number | null;
+  highPrice?: number | null;
+  marketPrice?: number | null;
+  directLowPrice?: number | null;
+}
+
+interface RawCard {
+  id: string;
+  localId: string;
+  name: string;
+  image?: string | null;
+  rarity?: string | null;
+  set: { id: string };
+  pricing?: {
+    tcgplayer?: { updated?: string; unit?: string } & Record<string, RawTcgplayerPrice | string | undefined>;
+  } | null;
+}
+
+const CARD_FIELDS = "id localId name image rarity set { id }";
+
+// ── Set catalog (every set, fetched once per page load) ─────────────────────
+
+let catalogPromise: Promise<Map<string, PokemonSet>> | null = null;
+
+export function getSetCatalog(): Promise<Map<string, PokemonSet>> {
+  if (!catalogPromise) {
+    catalogPromise = gql<{ sets: RawSet[] }>(
+      `{ sets { id name releaseDate logo symbol serie { id name } cardCount { official total } } }`
+    ).then(({ sets }) => {
+      const map = new Map<string, PokemonSet>();
+      for (const s of sets) {
+        if (s.serie?.id === POCKET_SERIE_ID) continue;
+        map.set(s.id, {
+          id:           s.id,
+          name:         s.name,
+          series:       s.serie?.name ?? "",
+          printedTotal: s.cardCount.official,
+          total:        s.cardCount.total,
+          releaseDate:  s.releaseDate,
+          images: {
+            logo:   s.logo ? `${s.logo}.png` : "",
+            symbol: s.symbol ? `${s.symbol}.png` : "",
+          },
+        });
+      }
+      return map;
+    });
+    // Don't cache a failure; the next call tries again.
+    catalogPromise.catch(() => { catalogPromise = null; });
+  }
+  return catalogPromise;
+}
+
+// ── Mapping TCGdex → app types ──────────────────────────────────────────────
+
+// TCGdex has no English scan for ~7% of cards (whole subsets like Trainer Galleries
+// and Shiny Vaults); for those, fall back to pokemontcg.io's image server.
+export function cardImage(raw: Pick<RawCard, "image" | "localId">, setId: string, quality: "low" | "high" = "low") {
+  if (raw.image) return `${raw.image}/${quality}.webp`;
+  return legacyImageUrl(setId, raw.localId, quality) ?? PLACEHOLDER_IMAGE;
+}
+
+// "reverse-holofoil" → "reverseHolofoil", matching the old pokemontcg.io price keys.
+function camelCase(key: string) {
+  return key.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
+}
+
+function toTcgplayer(raw: RawCard["pricing"]): PokemonCard["tcgplayer"] {
+  const tp = raw?.tcgplayer;
+  if (!tp) return undefined;
+  const prices: Record<string, TCGPlayerPrice> = {};
+  let productId: number | undefined;
+  for (const [key, value] of Object.entries(tp)) {
+    if (!value || typeof value !== "object") continue;
+    productId ??= value.productId;
+    prices[camelCase(key)] = {
+      low:       value.lowPrice ?? undefined,
+      mid:       value.midPrice ?? undefined,
+      high:      value.highPrice ?? undefined,
+      market:    value.marketPrice ?? undefined,
+      directLow: value.directLowPrice ?? undefined,
+    };
+  }
+  return {
+    url:       productId ? `https://www.tcgplayer.com/product/${productId}` : undefined,
+    updatedAt: typeof tp.updated === "string" ? tp.updated : undefined,
+    prices,
+  };
+}
+
+function toCard(raw: RawCard, set: PokemonSet): PokemonCard {
+  return {
+    id:     raw.id,
+    name:   raw.name,
+    number: raw.localId,
+    rarity: raw.rarity && raw.rarity !== "None" ? raw.rarity : undefined,
+    images: { small: cardImage(raw, set.id, "low"), large: cardImage(raw, set.id, "high") },
+    set,
+    tcgplayer: toTcgplayer(raw.pricing),
+  };
+}
+
+// Drops cards from sets outside the catalog (TCG Pocket).
+async function toCards(raws: RawCard[]): Promise<PokemonCard[]> {
+  const catalog = await getSetCatalog();
+  const cards: PokemonCard[] = [];
+  for (const raw of raws) {
+    const set = catalog.get(raw.set.id);
+    if (set) cards.push(toCard(raw, set));
+  }
+  return cards;
+}
+
+function compareCards(a: PokemonCard, b: PokemonCard) {
+  return (
+    a.set.releaseDate.localeCompare(b.set.releaseDate) ||
+    a.set.id.localeCompare(b.set.id) ||
+    a.number.localeCompare(b.number, undefined, { numeric: true })
+  );
+}
+
+// TCGdex name/illustrator filters match substrings ("mew" finds "Mewtwo");
+// keep only whole-word matches so a master set holds just that Pokémon.
+function matchesWord(text: string | null | undefined, word: string) {
+  if (!text) return false;
+  const escaped = word.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, "iu").test(text);
+}
+
+async function cardsByName(name: string): Promise<RawCard[]> {
+  const { cards } = await gql<{ cards: RawCard[] }>(
+    `query ($name: String) { cards(filters: { name: $name }) { ${CARD_FIELDS} } }`,
+    { name }
+  );
+  return cards;
+}
+
+async function cardsByIllustrator(artist: string): Promise<(RawCard & { illustrator?: string })[]> {
+  const { cards } = await gql<{ cards: (RawCard & { illustrator?: string })[] }>(
+    `query ($artist: String) { cards(filters: { illustrator: $artist }) { ${CARD_FIELDS} illustrator } }`,
+    { artist }
+  );
+  return cards;
+}
+
+// ── Public API ──────────────────────────────────────────────────────────────
+
+/** Image of the newest card that has a real scan (lists are sorted oldest first). */
+export function thumbnail(cards: PokemonCard[]): string {
+  return cards.findLast((c) => c.images.small !== PLACEHOLDER_IMAGE)?.images.small ?? PLACEHOLDER_IMAGE;
 }
 
 export interface SearchResult {
@@ -38,17 +235,17 @@ export interface SearchResult {
 export async function searchAll(query: string): Promise<SearchResult[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
+  const lower = trimmed.toLowerCase();
 
   const [setsRes, pokemonRes, artistRes] = await Promise.allSettled([
-    apiFetch<{ data: PokemonSet[] }>(
-      `/sets?q=name:${encodeURIComponent(trimmed)}&pageSize=8&orderBy=-releaseDate`
+    getSetCatalog().then((catalog) =>
+      [...catalog.values()]
+        .filter((s) => s.name.toLowerCase().includes(lower))
+        .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate))
+        .slice(0, 8)
     ),
-    apiFetch<{ data: PokemonCard[] }>(
-      `/cards?q=name:"${encodeURIComponent(trimmed)}"&pageSize=1&orderBy=-set.releaseDate`
-    ),
-    apiFetch<{ data: PokemonCard[]; totalCount: number }>(
-      `/cards?q=artist:"${encodeURIComponent(trimmed)}"&pageSize=1`
-    ),
+    getCardsForPokemon(trimmed),
+    getCardsForArtist(trimmed),
   ]);
 
   // If every request failed, the API is down — surface that instead of "No results".
@@ -59,35 +256,35 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
   if (setsRes.status === "fulfilled") {
-    for (const set of setsRes.value.data) {
+    for (const set of setsRes.value) {
       results.push({
         type: "set",
         id: set.id,
         label: set.name,
-        image: set.images?.logo || set.images?.symbol || "",
+        image: set.images.logo || set.images.symbol || "",
         subtitle: `${set.series} · ${set.printedTotal ?? set.total} cards`,
         setData: set,
       });
     }
   }
 
-  if (pokemonRes.status === "fulfilled" && pokemonRes.value.data.length > 0) {
+  if (pokemonRes.status === "fulfilled" && pokemonRes.value.length > 0) {
     results.push({
       type: "pokemon",
       id: trimmed,
       label: trimmed,
-      image: pokemonRes.value.data[0].images.small,
+      image: thumbnail(pokemonRes.value),
       subtitle: "All cards across every set",
     });
   }
 
-  if (artistRes.status === "fulfilled" && artistRes.value.data.length > 0) {
+  if (artistRes.status === "fulfilled" && artistRes.value.length > 0) {
     results.push({
       type: "artist",
       id: trimmed,
       label: trimmed,
-      image: artistRes.value.data[0].images.small,
-      subtitle: `Artist · ${artistRes.value.totalCount} cards`,
+      image: thumbnail(artistRes.value),
+      subtitle: `Artist · ${artistRes.value.length} cards`,
     });
   }
 
@@ -95,33 +292,18 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
 }
 
 export async function getCardsForPokemon(name: string): Promise<PokemonCard[]> {
-  const pageSize = 250;
-  let page = 1;
-  const all: PokemonCard[] = [];
-  while (true) {
-    const data = await apiFetch<{ data: PokemonCard[]; totalCount: number }>(
-      `/cards?q=name:${encodeURIComponent(name)}&pageSize=${pageSize}&page=${page}&orderBy=set.releaseDate,number`
-    );
-    all.push(...data.data);
-    if (all.length >= data.totalCount) break;
-    page++;
-  }
-  return all;
+  const raws = (await cardsByName(name)).filter((c) => matchesWord(c.name, name));
+  return (await toCards(raws)).sort(compareCards);
 }
 
 export async function getCardsForArtist(artist: string): Promise<PokemonCard[]> {
-  const pageSize = 250;
-  let page = 1;
-  const all: PokemonCard[] = [];
-  while (true) {
-    const data = await apiFetch<{ data: PokemonCard[]; totalCount: number }>(
-      `/cards?q=artist:"${encodeURIComponent(artist)}"&pageSize=${pageSize}&page=${page}&orderBy=set.releaseDate,number`
-    );
-    all.push(...data.data);
-    if (all.length >= data.totalCount) break;
-    page++;
-  }
-  return all;
+  const raws = (await cardsByIllustrator(artist)).filter((c) => matchesWord(c.illustrator, artist));
+  return (await toCards(raws)).sort(compareCards);
+}
+
+// "025" → "25", "TG01" → "TG1", "swsh001" → "SWSH1": compares card numbers across padding styles.
+export function normalizeNumber(num: string) {
+  return num.toUpperCase().replace(/^([A-Z]*)0*(?=\d)/, "$1");
 }
 
 export async function searchCards(query: string): Promise<PokemonCard[]> {
@@ -131,65 +313,72 @@ export async function searchCards(query: string): Promise<PokemonCard[]> {
   // Card number pattern: "25", "057", "25/102", "057/102", "TG01", "TG01/TG30", "SWSH001"
   const isNumberQuery = /^[A-Za-z]{0,5}\d+(?:\/[A-Za-z]{0,5}\d+)?$/.test(trimmed);
 
-  let q: string;
+  let cards: PokemonCard[];
   if (isNumberQuery) {
     const [rawNum, rawTotal] = trimmed.split("/");
-    // Strip leading zeros from purely numeric card numbers ("057" → "57")
-    const cardNumber = /^\d+$/.test(rawNum) ? String(parseInt(rawNum, 10)) : rawNum;
-    // When the total is a plain integer, include set.printedTotal to pin results
-    // to the specific set (e.g. "57/102" → number:57 set.printedTotal:102)
+    const cardNumber = normalizeNumber(rawNum);
+    // When the total is a plain integer, pin results to sets with that printed total
+    // (e.g. "57/102" → card 57 in a 102-card set).
     const totalNum = rawTotal !== undefined ? parseInt(rawTotal, 10) : NaN;
-    q = !isNaN(totalNum)
-      ? `number:${cardNumber} set.printedTotal:${totalNum}`
-      : `number:${cardNumber}`;
+    // The filter matches substrings ("25" also finds "025" and "125"); exact matching
+    // happens below. REST briefs are used because they're the smallest response.
+    const briefs = await restFetch<{ id: string; localId: string; name: string; image?: string }[]>(
+      `/cards?localId=${encodeURIComponent(/^\d+$/.test(cardNumber) ? cardNumber : rawNum)}`
+    );
+    const raws = briefs.map((c) => ({ ...c, set: { id: c.id.slice(0, c.id.length - c.localId.length - 1) } }));
+    cards = (await toCards(raws)).filter(
+      (c) => normalizeNumber(c.number) === cardNumber && (isNaN(totalNum) || c.set.printedTotal === totalNum)
+    );
   } else {
-    q = `name:${trimmed}`;
+    cards = await toCards(await cardsByName(trimmed));
   }
 
-  const data = await apiFetch<{ data: PokemonCard[] }>(
-    `/cards?q=${encodeURIComponent(q)}&pageSize=20&orderBy=-set.releaseDate`
-  );
-  return data.data;
+  return cards.sort((a, b) => compareCards(b, a)).slice(0, 20);
 }
 
 export async function getCard(id: string): Promise<PokemonCard> {
-  const data = await apiFetch<{ data: PokemonCard }>(`/cards/${id}`);
-  return data.data;
+  const raw = await restFetch<RawCard & { set: { id: string; name: string } }>(`/cards/${encodeURIComponent(id)}`);
+  const catalog = await getSetCatalog();
+  const set = catalog.get(raw.set.id);
+  if (!set) throw new Error(`Card ${id} is not part of the physical TCG`);
+  return toCard(raw, set);
 }
 
 export async function getSet(id: string): Promise<PokemonSet> {
-  const data = await apiFetch<{ data: PokemonSet }>(`/sets/${id}`);
-  return data.data;
-}
-
-export async function getCardsByIds(ids: string[]): Promise<PokemonCard[]> {
-  if (ids.length === 0) return [];
-  const CHUNK = 50;
-  const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
-
-  const results = await Promise.all(
-    chunks.map((chunk) => {
-      const q = chunk.map((id) => `id:${id}`).join(" OR ");
-      return apiFetch<{ data: PokemonCard[] }>(
-        `/cards?q=${encodeURIComponent(q)}&pageSize=250`
-      ).then((r) => r.data);
-    })
-  );
-  return results.flat();
+  const set = (await getSetCatalog()).get(id);
+  if (!set) throw new Error(`Set ${id} not found`);
+  return set;
 }
 
 export async function getCardsForSet(setId: string): Promise<PokemonCard[]> {
-  const pageSize = 250;
-  let page = 1;
-  const all: PokemonCard[] = [];
-  while (true) {
-    const data = await apiFetch<{ data: PokemonCard[]; totalCount: number }>(
-      `/cards?q=set.id:${setId}&pageSize=${pageSize}&page=${page}&orderBy=number`
-    );
-    all.push(...data.data);
-    if (all.length >= data.totalCount) break;
-    page++;
+  const set = await getSet(setId);
+  const raw = await restFetch<{ cards: { id: string; localId: string; name: string; image?: string }[] }>(
+    `/sets/${encodeURIComponent(setId)}`
+  );
+  return raw.cards.map((c) => toCard({ ...c, set: { id: setId } }, set));
+}
+
+// Fetches full cards (with prices) a few at a time. Unknown IDs are skipped.
+export async function getCardsByIds(ids: string[]): Promise<PokemonCard[]> {
+  if (ids.length === 0) return [];
+  const CONCURRENCY = 10;
+  const cards: PokemonCard[] = [];
+  let firstError: unknown = null;
+  let next = 0;
+
+  async function worker() {
+    while (next < ids.length) {
+      const id = ids[next++];
+      try {
+        cards.push(await getCard(id));
+      } catch (e) {
+        if (!(e instanceof ApiError && e.status === 404)) firstError ??= e;
+      }
+    }
   }
-  return all;
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, ids.length) }, worker));
+
+  // Only fail when nothing loaded; otherwise show what we have.
+  if (cards.length === 0 && firstError) throw firstError;
+  return cards;
 }

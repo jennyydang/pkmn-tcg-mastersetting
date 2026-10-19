@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from "r
 import { CustomCardDef, TrackedMasterSet } from "./types";
 import { supabase } from "./supabase";
 import { useAuth } from "./auth";
+import { migrateToTcgdexIds } from "./migrateIds";
 
 const STORAGE_KEY = "pkmn-tcg-mastersetting-v3";
 const COLLECTION_KEY = "pkmn-tcg-collection-v1";
@@ -116,11 +117,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         customCards: customByItem.get(row.item_id),
       }));
 
-      setTrackedItems(loaded);
-      setCollectionCardIds((colCards ?? []).map((r) => r.card_id));
+      // Convert IDs saved under pokemontcg.io to TCGdex (no-op once done). If TCGdex
+      // is unreachable, carry on with the saved IDs and try again next load.
+      let data = { items: loaded, collection: (colCards ?? []).map((r) => r.card_id) };
+      try {
+        data = await migrateToTcgdexIds(user!.id, data);
+      } catch (e) {
+        console.error("TCGdex ID migration failed", e);
+      }
+
+      setTrackedItems(data.items);
+      setCollectionCardIds(data.collection);
       loadedForUser.current = user!.id;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
-      localStorage.setItem(COLLECTION_KEY, JSON.stringify((colCards ?? []).map((r) => r.card_id)));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.items));
+      localStorage.setItem(COLLECTION_KEY, JSON.stringify(data.collection));
     }
 
     loadFromSupabase();

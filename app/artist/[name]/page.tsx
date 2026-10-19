@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCardsForArtist } from "@/lib/api";
+import { getCardsForArtist, thumbnail } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -48,7 +48,7 @@ export default function ArtistMasterSetPage({ params }: Props) {
             type: "artist",
             id: artist,
             label: artist,
-            image: fetched[0].images.small,
+            image: thumbnail(fetched),
             totalCards: fetched.length,
             ownedCards: [],
             subtitle: `Artist · ${fetched.length} cards`,
