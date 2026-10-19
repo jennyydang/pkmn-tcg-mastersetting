@@ -7,6 +7,7 @@ import { useIncludeVariants } from "@/lib/prefs";
 import { CardVariant, PokemonCard } from "@/lib/types";
 import { VARIANT_LABELS, cardVariants, ownedKey, variantPrice } from "@/lib/variants";
 import CardGrid, { CardTile } from "./CardGrid";
+import { staggerStyle } from "@/lib/motion";
 
 interface Props {
   cards: PokemonCard[];
@@ -87,6 +88,7 @@ const COLLAPSED_ROWS = 10;
 
 function WhatsLeft({ entries, includeVariants, showSetNames }: { entries: MissingEntry[]; includeVariants: boolean; showSetNames: boolean }) {
   const [open, setOpen]       = useState(false);
+  const [opened, setOpened]   = useState(false);
   const [priced, setPriced]   = useState<Map<string, PokemonCard>>(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
@@ -115,6 +117,7 @@ function WhatsLeft({ entries, includeVariants, showSetNames }: { entries: Missin
   function toggleOpen() {
     const next = !open;
     setOpen(next);
+    if (next) setOpened(true);
     if (next) loadPrices();
   }
 
@@ -158,59 +161,64 @@ function WhatsLeft({ entries, includeVariants, showSetNames }: { entries: Missin
         </svg>
       </button>
 
-      {open && (
-        <div className="border-t border-gray-100 dark:border-gray-700 px-5 py-4 space-y-3">
-          {loading && (
-            <p className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-              Pricing {unpricedIds.length} {unpricedIds.length === 1 ? "card" : "cards"}…
-            </p>
-          )}
-          {error && (
-            <p className="text-sm text-red-500 dark:text-red-400">
-              {error}{" "}
-              <button onClick={loadPrices} className="font-medium underline">Retry</button>
-            </p>
-          )}
-          {!loading && unpricedIds.length > 0 && priced.size > 0 && (
-            <button onClick={loadPrices} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
-              Price {unpricedIds.length} newly missing {unpricedIds.length === 1 ? "card" : "cards"}
-            </button>
-          )}
+      {/* Kept mounted after the first open so closing animates too; inert while closed. */}
+      <div className="expand-panel" data-open={open}>
+        <div inert={!open}>
+          {opened && (
+            <div className="border-t border-gray-100 dark:border-gray-700 px-5 py-4 space-y-3">
+              {loading && (
+                <p className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                  Pricing {unpricedIds.length} {unpricedIds.length === 1 ? "card" : "cards"}…
+                </p>
+              )}
+              {error && (
+                <p className="text-sm text-red-500 dark:text-red-400">
+                  {error}{" "}
+                  <button onClick={loadPrices} className="font-medium underline">Retry</button>
+                </p>
+              )}
+              {!loading && unpricedIds.length > 0 && priced.size > 0 && (
+                <button onClick={loadPrices} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                  Price {unpricedIds.length} newly missing {unpricedIds.length === 1 ? "card" : "cards"}
+                </button>
+              )}
 
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-            {visible.map(({ card, variant, price }) => (
-              <li key={`${card.id}|${variant ?? "any"}`} className="flex items-center gap-3 py-2">
-                <Image src={card.images.small} alt="" width={32} height={45} className="rounded shrink-0" unoptimized />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{card.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    #{card.number}
-                    {showSetNames && ` · ${card.set.name}`}
-                    {variant && cardVariants(card).length > 1 && ` · ${VARIANT_LABELS[variant].long}`}
-                  </p>
-                </div>
-                <span className="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100 shrink-0">
-                  {price != null ? fmt(price) : priced.has(card.id) ? "No price" : "—"}
-                </span>
-              </li>
-            ))}
-          </ul>
+              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+                {visible.map(({ card, variant, price }, i) => (
+                  <li key={`${card.id}|${variant ?? "any"}`} style={staggerStyle(i)} className="stagger-in flex items-center gap-3 py-2">
+                    <Image src={card.images.small} alt="" width={32} height={45} className="rounded shrink-0" unoptimized />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{card.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        #{card.number}
+                        {showSetNames && ` · ${card.set.name}`}
+                        {variant && cardVariants(card).length > 1 && ` · ${VARIANT_LABELS[variant].long}`}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100 shrink-0">
+                      {price != null ? fmt(price) : priced.has(card.id) ? "No price" : "—"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
 
-          {rows.length > COLLAPSED_ROWS && (
-            <button onClick={() => setShowAll(!showAll)} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
-              {showAll ? "Show fewer" : `Show all ${rows.length}`}
-            </button>
-          )}
+              {rows.length > COLLAPSED_ROWS && (
+                <button onClick={() => setShowAll(!showAll)} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                  {showAll ? "Show fewer" : `Show all ${rows.length}`}
+                </button>
+              )}
 
-          {!loading && pricedAny && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              TCGplayer market prices{unknown > 0 && `; ${unknown} without a price aren't in the total`}
-              {!includeVariants && ". Each card is priced at its cheapest version"}.
-            </p>
+              {!loading && pricedAny && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  TCGplayer market prices{unknown > 0 && `; ${unknown} without a price aren't in the total`}
+                  {!includeVariants && ". Each card is priced at its cheapest version"}.
+                </p>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
     </section>
   );
 }

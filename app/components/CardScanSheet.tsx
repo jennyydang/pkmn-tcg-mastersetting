@@ -143,7 +143,7 @@ export default function CardScanSheet({ onAdd, onClose, isInCollection }: Props)
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/60"
+        className="fade-in fixed inset-0 z-50 bg-black/60"
         onClick={handleClose}
         aria-hidden="true"
       />

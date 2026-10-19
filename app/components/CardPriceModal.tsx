@@ -44,7 +44,7 @@ export default function CardPriceModal({ card, loading, onClose, cardKey, owned 
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/60" onClick={handleClose} aria-hidden="true" />
+      <div className="fade-in fixed inset-0 z-50 bg-black/60" onClick={handleClose} aria-hidden="true" />
 
       {/* Bottom sheet on mobile → centered modal on desktop */}
       <div

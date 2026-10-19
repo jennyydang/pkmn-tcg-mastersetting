@@ -6,6 +6,8 @@ import { VARIANT_LABELS } from "@/lib/variants";
 import Image from "next/image";
 import { useState } from "react";
 import CardPriceModal from "./CardPriceModal";
+import { staggerStyle, tiltHandlers } from "@/lib/motion";
+import { tapFeedback } from "@/lib/haptics";
 import { CardsIcon } from "./Icons";
 
 /** One tappable card in the grid: a card, or one printed version of it. */
@@ -20,24 +22,35 @@ export interface CardTile {
 
 interface CardItemProps {
   tile: CardTile;
+  index: number;
   onToggle: () => void;
   onInfo: () => void;
 }
 
-function CardItem({ tile, onToggle, onInfo }: CardItemProps) {
+function CardItem({ tile, index, onToggle, onInfo }: CardItemProps) {
   const { card, variant, owned } = tile;
   const [imgError, setImgError] = useState(false);
+  // Pulse only when the user marks the card, not for cards already owned on load.
+  const [pulse, setPulse] = useState(false);
   const label = variant ? ` ${VARIANT_LABELS[variant].long}` : "";
 
+  function handleToggle() {
+    tapFeedback();
+    setPulse(!owned);
+    onToggle();
+  }
+
   return (
-    <div className="relative">
+    <div className="relative stagger-in" style={staggerStyle(index)}>
       <button
-        onClick={onToggle}
+        onClick={handleToggle}
+        {...tiltHandlers}
+        onAnimationEnd={(e) => { if (e.animationName === "owned-pulse") setPulse(false); }}
         aria-label={`${card.name}${label} #${card.number} — ${owned ? "Owned, click to unmark" : "Not owned, click to mark as owned"}`}
         aria-pressed={owned}
-        className={`relative w-full rounded-lg overflow-hidden transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 hover:scale-105 ${
+        className={`tile relative w-full rounded-lg overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
           owned ? "opacity-100 shadow-md" : "opacity-50 hover:opacity-70"
-        }`}
+        } ${pulse ? "owned-pulse" : ""}`}
       >
         {!imgError ? (
           <Image
@@ -67,7 +80,7 @@ function CardItem({ tile, onToggle, onInfo }: CardItemProps) {
           </span>
         )}
         {owned && (
-          <div className="absolute top-1 right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow" aria-hidden="true">
+          <div className={`absolute top-1 right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow ${pulse ? "pop-in" : ""}`} aria-hidden="true">
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
@@ -117,10 +130,11 @@ export default function CardGrid({ tiles, onToggle }: Props) {
   return (
     <>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 sm:gap-3">
-        {tiles.map((tile) => (
+        {tiles.map((tile, i) => (
           <CardItem
             key={tile.key}
             tile={tile}
+            index={i}
             onToggle={() => onToggle(tile.key)}
             onInfo={() => openPrice(tile)}
           />

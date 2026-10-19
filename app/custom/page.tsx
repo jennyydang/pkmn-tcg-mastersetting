@@ -185,7 +185,7 @@ function CustomSetView() {
             </div>
 
             {searchOpen && searchResults.length > 0 && (
-              <ul id="card-search-results" role="listbox" className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+              <ul id="card-search-results" role="listbox" className="dropdown-in absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-72 overflow-y-auto">
                 {searchResults.map((card) => {
                   const already = alreadyInSet.has(card.id);
                   return (

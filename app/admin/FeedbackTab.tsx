@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { APP_NAME } from "@/lib/appInfo";
+import { staggerStyle } from "@/lib/motion";
 import { BugIcon, ChatIcon, CheckCircleIcon, LightBulbIcon } from "@/app/components/Icons";
 import { ErrorText, Spinner, cardClass, dangerButton, inputClass, primaryButton, secondaryButton, timeAgo } from "./ui";
 
@@ -83,12 +84,12 @@ export default function FeedbackTab() {
       {items?.length === 0 && (
         <p className="py-12 flex flex-col items-center gap-2 text-gray-400"><CheckCircleIcon className="w-8 h-8" />Nothing here</p>
       )}
-      {items?.map((f) => <FeedbackItem key={f.id} item={f} onChanged={load} />)}
+      {items?.map((f, i) => <FeedbackItem key={f.id} item={f} index={i} onChanged={load} />)}
     </div>
   );
 }
 
-function FeedbackItem({ item, onChanged }: { item: Feedback; onChanged: () => void }) {
+function FeedbackItem({ item, index, onChanged }: { item: Feedback; index: number; onChanged: () => void }) {
   const [note, setNote]       = useState(item.admin_note ?? "");
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState<string | null>(null);
@@ -123,7 +124,7 @@ function FeedbackItem({ item, onChanged }: { item: Feedback; onChanged: () => vo
     : null;
 
   return (
-    <article className={`${cardClass} p-5 space-y-3`}>
+    <article style={staggerStyle(index)} className={`stagger-in ${cardClass} p-5 space-y-3`}>
       <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 font-semibold text-gray-700 dark:text-gray-200">
           {(() => { const { Icon, label } = KIND_BADGE[item.kind]; return <><Icon className="w-3.5 h-3.5" />{label}</>; })()}

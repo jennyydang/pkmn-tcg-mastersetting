@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth";
+import { staggerStyle } from "@/lib/motion";
 import { useCardData } from "@/lib/cardData";
 import { getCardsByIds } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
@@ -103,8 +104,8 @@ export default function WantsPage() {
       )}
 
       <ul className="space-y-2">
-        {rows.map(({ key, card, variant, target, price, hit }) => (
-          <li key={key} className={`flex items-center gap-3 bg-white dark:bg-gray-800 rounded-2xl border p-3 shadow-sm ${hit ? "border-green-400 dark:border-green-600" : "border-gray-200 dark:border-gray-700"}`}>
+        {rows.map(({ key, card, variant, target, price, hit }, i) => (
+          <li key={key} style={staggerStyle(i)} className={`stagger-in flex items-center gap-3 bg-white dark:bg-gray-800 rounded-2xl border p-3 shadow-sm ${hit ? "border-green-400 dark:border-green-600" : "border-gray-200 dark:border-gray-700"}`}>
             <button onClick={() => setOpenKey(key)} className="flex flex-1 min-w-0 items-center gap-3 text-left">
               <Image src={card!.images.small} alt="" width={44} height={62} className="rounded shrink-0" unoptimized />
               <div className="min-w-0 flex-1">

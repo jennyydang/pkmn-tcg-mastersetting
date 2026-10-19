@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { ownedCardIds } from "@/lib/variants";
 import { masterSetHref } from "@/lib/links";
+import { tiltHandlers } from "@/lib/motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useSortable } from "@dnd-kit/sortable";
@@ -15,9 +16,11 @@ interface Props {
   tracked: TrackedMasterSet;
   isEditing: boolean;
   onActivateEdit: () => void;
+  /** Position in the grid, for the cascading entrance. */
+  index?: number;
 }
 
-export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Props) {
+export default function MasterSetCard({ tracked, isEditing, onActivateEdit, index = 0 }: Props) {
   const { removeItem } = useStore();
   const { id, label, image, totalCards, ownedCards, type, subtitle } = tracked;
   // Count cards, not versions: a card with several owned versions counts once.
@@ -55,7 +58,8 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
     transition,
     zIndex: isDragging ? 50 : undefined,
     opacity: isDragging ? 0.4 : 1,
-  };
+    "--i": index,
+  } as React.CSSProperties;
 
   // When editing: spread dnd-kit listeners for drag.
   // When not editing: attach long-press handlers to trigger jiggle mode.
@@ -65,7 +69,8 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
     ? { ...attributes, ...listeners }
     : {
         onPointerDown: handleLongPressDown,
-        onPointerMove: handleLongPressMove,
+        onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => { handleLongPressMove(); tiltHandlers.onPointerMove(e); },
+        onPointerLeave: tiltHandlers.onPointerLeave,
         onPointerUp: handleLongPressUp,
       };
 
@@ -127,7 +132,7 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
         style={style}
         {...interactionProps}
         onContextMenu={(e) => e.preventDefault()}
-        className={`relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow select-none ${isEditing ? "touch-none" : "touch-pan-y"}`}
+        className={`stagger-in relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm select-none ${isEditing ? "touch-none" : "tile touch-pan-y"}`}
       >
         {isEditing && (
           <button
@@ -151,10 +156,10 @@ export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Pr
 
       {showDeleteModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          className="fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteModal(false); }}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="dialog-in bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="p-6">
               <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Remove {label}?</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">Your progress will be lost. This cannot be undone.</p>

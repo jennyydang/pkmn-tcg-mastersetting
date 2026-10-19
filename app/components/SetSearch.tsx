@@ -86,7 +86,7 @@ export default function MasterSetSearch() {
         </div>
 
         {open && hasResults && (
-          <ul className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-80 overflow-y-auto">
+          <ul className="dropdown-in absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-80 overflow-y-auto">
             {sets.length > 0 && (
               <>
                 <li className="px-4 pt-2.5 pb-1">
@@ -115,13 +115,13 @@ export default function MasterSetSearch() {
         )}
 
         {open && !loading && error && query.trim() && (
-          <div className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm text-red-500 dark:text-red-400">
+          <div className="dropdown-in absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm text-red-500 dark:text-red-400">
             The card database isn&rsquo;t responding right now. Please try again in a minute.
           </div>
         )}
 
         {open && !loading && !error && !hasResults && query.trim() && (
-          <div className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+          <div className="dropdown-in absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
             No results for &ldquo;{query}&rdquo;
           </div>
         )}
@@ -137,10 +137,10 @@ export default function MasterSetSearch() {
 
       {pending && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          className="fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setPending(null); }}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="dialog-in bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="relative bg-gradient-to-b from-blue-50 to-white dark:from-gray-700 dark:to-gray-800 p-6 flex flex-col items-center gap-3">
               <button
                 onClick={() => setPending(null)}

@@ -98,6 +98,6 @@ Nintendo/The Pokémon Company actively enforce theirs. To reduce the risk:
 - **Camera usage string** and **export compliance** (`ITSAppUsesNonExemptEncryption = NO`) are in
   `ios/App/App/Info.plist`.
 - **Notch / home indicator**: the layout uses `viewport-fit=cover` with safe-area padding.
-- **Minimum functionality** (4.2): the app bundles its UI rather than loading a website. Adding one or two
-  native touches (haptics, a share sheet, push notifications) further
-  reduces the chance of a "just a website" rejection.
+- **Minimum functionality** (4.2): the app bundles its UI rather than loading a website, and uses
+  native haptics (marking cards, completing a set). A share sheet or push notifications would
+  further reduce the chance of a "just a website" rejection.

@@ -72,10 +72,10 @@ export default function Home() {
 
       {showCreateModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          className="fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowCreateModal(false); }}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="dialog-in bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="p-6">
               <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Create Custom Set</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Give your set a name, then add cards one by one.</p>
@@ -149,9 +149,10 @@ export default function Home() {
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={trackedItems.map((t) => t.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {trackedItems.map((tracked) => (
+                {trackedItems.map((tracked, i) => (
                   <MasterSetCard
                     key={tracked.id}
+                    index={i}
                     tracked={tracked}
                     isEditing={isEditing}
                     onActivateEdit={() => setIsEditing(true)}

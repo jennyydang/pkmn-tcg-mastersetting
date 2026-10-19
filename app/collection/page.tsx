@@ -11,6 +11,7 @@ import { PokemonCard } from "@/lib/types";
 import CardPriceModal from "@/app/components/CardPriceModal";
 import CollectionMasterSets from "@/app/components/CollectionMasterSets";
 import { ownedCardIds } from "@/lib/variants";
+import { staggerStyle } from "@/lib/motion";
 import CardScanSheet, { useCanScan } from "@/app/components/CardScanSheet";
 import { CardsIcon, ChevronRightIcon, SearchIcon } from "@/app/components/Icons";
 
@@ -199,7 +200,7 @@ export default function CollectionPage() {
             <ul
               id="collection-search-results"
               role="listbox"
-              className="absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-72 overflow-y-auto"
+              className="dropdown-in absolute z-50 top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-72 overflow-y-auto"
             >
               {searchResults.map((card) => {
                 const inCol = isInCollection(card.id);
@@ -272,8 +273,8 @@ export default function CollectionPage() {
         </div>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
-          {cards.map((card) => (
-            <div key={card.id} className="relative">
+          {cards.map((card, i) => (
+            <div key={card.id} style={staggerStyle(i)} className="stagger-in relative">
               {/* Remove button */}
               <button
                 onClick={() => handleRemove(card)}

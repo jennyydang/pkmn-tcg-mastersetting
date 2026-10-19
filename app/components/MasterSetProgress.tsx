@@ -5,6 +5,9 @@ import { useIncludeVariants } from "@/lib/prefs";
 import { variantProgress } from "@/lib/variants";
 import ProgressBar from "./ProgressBar";
 import { TrophyIcon } from "./Icons";
+import Confetti from "./Confetti";
+import { useEffect, useRef, useState } from "react";
+import { successFeedback } from "@/lib/haptics";
 
 interface Props {
   cards: PokemonCard[];
@@ -19,6 +22,18 @@ export default function MasterSetProgress({ cards, ownedKeys, completeLabel }: P
   const p = variantProgress(cards, ownedKeys);
   const hasVariants = p.versionsTotal > p.cardsTotal;
   const complete = includeVariants ? p.versionsOwned >= p.versionsTotal : p.cardsOwned >= p.cardsTotal;
+
+  // Celebrate the moment a set becomes complete, not every visit to a finished set.
+  const [celebrate, setCelebrate] = useState(false);
+  const wasComplete = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (cards.length === 0) return;
+    if (wasComplete.current === false && complete) {
+      setCelebrate(true);
+      successFeedback();
+    }
+    wasComplete.current = complete;
+  }, [complete, cards.length]);
 
   return (
     <div className="space-y-2">
@@ -37,8 +52,10 @@ export default function MasterSetProgress({ cards, ownedKeys, completeLabel }: P
         <ProgressBar owned={p.cardsOwned} total={p.cardsTotal} />
       )}
 
+      {celebrate && <Confetti onDone={() => setCelebrate(false)} />}
+
       {complete && cards.length > 0 && (
-        <div className="inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
+        <div className="pop-in inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
           <TrophyIcon className="w-4 h-4" /> {completeLabel}
         </div>
       )}

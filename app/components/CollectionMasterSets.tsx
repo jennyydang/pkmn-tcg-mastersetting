@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getCardsByIds } from "@/lib/api";
 import { masterSetHref } from "@/lib/links";
+import { staggerStyle, tiltHandlers } from "@/lib/motion";
 import { PokemonCard, TrackedMasterSet } from "@/lib/types";
 import { VARIANT_LABELS, cardVariants, ownedCardIds, parseOwnedKey } from "@/lib/variants";
 import CardPriceModal from "./CardPriceModal";
@@ -21,14 +22,15 @@ export default function CollectionMasterSets({ items }: { items: TrackedMasterSe
       <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">From your master sets</h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Cards you’ve marked as owned in your master sets.</p>
       <div className="space-y-3">
-        {withCards.map((item) => <MasterSetSection key={item.id} item={item} />)}
+        {withCards.map((item, i) => <MasterSetSection key={item.id} item={item} index={i} />)}
       </div>
     </section>
   );
 }
 
-function MasterSetSection({ item }: { item: TrackedMasterSet }) {
+function MasterSetSection({ item, index }: { item: TrackedMasterSet; index: number }) {
   const [open, setOpen]       = useState(false);
+  const [opened, setOpened]   = useState(false);
   const [cards, setCards]     = useState<Map<string, PokemonCard> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState(false);
@@ -53,6 +55,7 @@ function MasterSetSection({ item }: { item: TrackedMasterSet }) {
   function toggle() {
     const next = !open;
     setOpen(next);
+    if (next) setOpened(true);
     if (next && !cards) load();
   }
 
@@ -74,7 +77,7 @@ function MasterSetSection({ item }: { item: TrackedMasterSet }) {
     : [];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div style={staggerStyle(index)} className="stagger-in bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
       <div className="flex items-center gap-3 p-4">
         <button onClick={toggle} aria-expanded={open} className="flex flex-1 min-w-0 items-center gap-3 text-left min-h-[44px]">
           {item.image ? (
@@ -100,42 +103,48 @@ function MasterSetSection({ item }: { item: TrackedMasterSet }) {
         </Link>
       </div>
 
-      {open && (
-        <div className="border-t border-gray-100 dark:border-gray-700 p-4">
-          {loading && !cards && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
-              {Array.from({ length: Math.min(versionCount, 8) }).map((_, i) => (
-                <div key={i} className="aspect-[146/204] bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" aria-hidden="true" />
-              ))}
-            </div>
-          )}
-          {error && (
-            <p className="text-sm text-red-500 dark:text-red-400">
-              Couldn’t load these cards. <button onClick={load} className="font-medium underline">Retry</button>
-            </p>
-          )}
-          {cards && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
-              {tiles.map(({ key, card, label }) => (
-                <div key={key} className="relative">
-                  <button
-                    onClick={() => setPrice({ card, key })}
-                    aria-label={`${card.name}${label ? ` ${label}` : ""} #${card.number}: view price and your copies`}
-                    className="relative block w-full rounded-lg overflow-hidden shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                  >
-                    <Image src={card.images.small} alt={card.name} width={146} height={204} className="w-full h-auto block" unoptimized />
-                    {label && (
-                      <span className="absolute bottom-1 inset-x-1 rounded-md px-1 py-0.5 text-center text-[10px] font-bold leading-tight text-white bg-black/60">
-                        {label}
-                      </span>
-                    )}
-                  </button>
+      {/* Kept mounted after the first open so closing animates too; inert while closed. */}
+      <div className="expand-panel" data-open={open}>
+        <div inert={!open}>
+          {opened && (
+            <div className="border-t border-gray-100 dark:border-gray-700 p-4">
+              {loading && !cards && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
+                  {Array.from({ length: Math.min(versionCount, 8) }).map((_, i) => (
+                    <div key={i} className="aspect-[146/204] bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" aria-hidden="true" />
+                  ))}
                 </div>
-              ))}
+              )}
+              {error && (
+                <p className="text-sm text-red-500 dark:text-red-400">
+                  Couldn’t load these cards. <button onClick={load} className="font-medium underline">Retry</button>
+                </p>
+              )}
+              {cards && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
+                  {tiles.map(({ key, card, label }, i) => (
+                    <div key={key} style={staggerStyle(i)} className="stagger-in relative">
+                      <button
+                        onClick={() => setPrice({ card, key })}
+                        aria-label={`${card.name}${label ? ` ${label}` : ""} #${card.number}: view price and your copies`}
+                        {...tiltHandlers}
+                    className="tile relative block w-full rounded-lg overflow-hidden shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      >
+                        <Image src={card.images.small} alt={card.name} width={146} height={204} className="w-full h-auto block" unoptimized />
+                        {label && (
+                          <span className="absolute bottom-1 inset-x-1 rounded-md px-1 py-0.5 text-center text-[10px] font-bold leading-tight text-white bg-black/60">
+                            {label}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
 
       {price && (
         <CardPriceModal card={price.card} loading={false} cardKey={price.key} owned onClose={() => setPrice(null)} />
