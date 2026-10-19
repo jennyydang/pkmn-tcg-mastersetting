@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { useCardData } from "@/lib/cardData";
 import { useAuth } from "@/lib/auth";
-import { getCardsByIds } from "@/lib/api";
-import { VARIANT_LABELS, ownedCardIds, parseOwnedKey, variantPrice } from "@/lib/variants";
-import { CopyDetails } from "@/lib/cardData";
-import { conditionPrice } from "@/lib/conditions";
+import { VARIANT_LABELS, parseOwnedKey } from "@/lib/variants";
+import { useCollectionValue } from "@/lib/collectionValue";
 import { supabase } from "@/lib/supabase";
 import { ChevronRightIcon } from "@/app/components/Icons";
 import {
@@ -38,14 +36,6 @@ interface CardRow {
   condition: string | null;
 }
 
-/**
- * One copy's value: the market price adjusted for the condition you set
- * (lib/conditions.ts). Graded copies, and copies without a condition, use the
- * market price.
- */
-function copyValue(market: number, d: CopyDetails | undefined) {
-  return d?.condition && !d.gradeCompany ? conditionPrice(market, d.condition) : market;
-}
 
 interface BreakdownRow {
   id: string;
@@ -58,18 +48,11 @@ interface BreakdownRow {
 export default function PortfolioPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { trackedItems, collectionCardIds } = useStore();
+  const { trackedItems } = useStore();
   const { details } = useCardData();
 
-  const [loading, setLoading] = useState(true);
-  const [totalValue, setTotalValue] = useState(0);
-  // The same cards at the Near Mint market price, to compare with your conditions.
-  const [marketValue, setMarketValue] = useState(0);
-  const [cardCount, setCardCount] = useState(0);
-  // Cards with a price paid recorded: what they cost and what they're worth now.
-  const [costBasis, setCostBasis] = useState<{ paid: number; worth: number; copies: number } | null>(null);
+  const { loading, valuation } = useCollectionValue();
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
-  const [breakdown, setBreakdown] = useState<BreakdownRow[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   function toggleExpanded(id: string) {
@@ -85,111 +68,78 @@ export default function PortfolioPage() {
     if (!authLoading && !user) router.replace("/");
   }, [user, authLoading, router]);
 
-  useEffect(() => {
-    if (authLoading || !user) return;
-    if (trackedItems.length === 0 && collectionCardIds.length === 0 && details.size === 0) { setLoading(false); return; }
+  const totalValue = valuation?.total ?? 0;
+  // The same cards at the Near Mint market price, to compare with your conditions.
+  const marketValue = valuation?.marketTotal ?? 0;
+  const cardCount = valuation?.count ?? 0;
 
-    async function compute() {
-      setLoading(true);
-      try {
-        // Owned entries can be a specific version ("<card id>|reverse"); each is
-        // priced as that version.
-        // Everything you own: versions checked off in master sets, versions with
-        // copy details, and My Collection cards with no version recorded (as
-        // their base version), so this matches the Collection page.
-        const allKeys = new Set<string>();
-        for (const item of trackedItems) {
-          for (const key of item.ownedCards) allKeys.add(key);
-        }
-        for (const key of details.keys()) allKeys.add(key);
-        const recorded = ownedCardIds([...allKeys]);
-        for (const id of collectionCardIds) if (!recorded.has(id)) allKeys.add(id);
-
-        const cards = await getCardsByIds([...ownedCardIds([...allKeys])]);
-        const cardById = new Map(cards.map((c) => [c.id, c]));
-
-        const cardInfoMap = new Map<string, { name: string; number: string; setTotal: number }>();
-        const priceMap = new Map<string, number>();
-        for (const key of allKeys) {
-          const { cardId, variant } = parseOwnedKey(key);
-          const card = cardById.get(cardId);
-          if (!card) continue;
-          const name = variant ? `${card.name} (${VARIANT_LABELS[variant].long})` : card.name;
-          cardInfoMap.set(key, { name, number: card.number, setTotal: card.set.printedTotal ?? card.set.total });
-          const market = variantPrice(card, variant);
-          if (market != null) priceMap.set(key, market);
-        }
-
-        // Each owned version counts once overall (even if it's in several master
-        // sets), times the number of copies recorded for it.
-        const qty = (key: string) => details.get(key)?.quantity ?? 1;
-        const yours = (key: string) => { const m = priceMap.get(key); return m == null ? undefined : copyValue(m, details.get(key)); };
-        let total = 0, market = 0, count = 0, paid = 0, worth = 0, paidCopies = 0;
-        for (const [key, price] of priceMap) {
-          total += yours(key)! * qty(key);
-          market += price * qty(key);
-          count += qty(key);
-        }
-        for (const key of allKeys) {
-          const d = details.get(key);
-          if (d?.purchasePrice == null) continue;
-          paid += d.purchasePrice * d.quantity;
-          worth += (yours(key) ?? 0) * d.quantity;
-          paidCopies += d.quantity;
-        }
-        setTotalValue(total);
-        setMarketValue(market);
-        setCardCount(count);
-        setCostBasis(paidCopies > 0 ? { paid, worth, copies: paidCopies } : null);
-
-        const row = (id: string, label: string, keys: string[]): BreakdownRow => {
-          let itemValue = 0;
-          const itemCards: CardRow[] = keys.map((cardId) => {
-            const d = details.get(cardId);
-            const quantity = d?.quantity ?? 1;
-            const unit = yours(cardId);
-            const price = unit != null ? unit * quantity : null;
-            itemValue += price ?? 0;
-            const info = cardInfoMap.get(cardId);
-            const grade = d?.gradeCompany ? `${d.gradeCompany} ${d.grade ?? ""}`.trim() : null;
-            return { id: cardId, name: info?.name ?? cardId, number: info?.number ?? "", setTotal: info?.setTotal ?? 0, price, quantity, grade, condition: grade ? null : d?.condition ?? null };
-          });
-          itemCards.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
-          return { id, label, ownedCount: keys.length, value: itemValue, cards: itemCards };
-        };
-        const inSets = new Set(trackedItems.flatMap((t) => t.ownedCards));
-        const rows: BreakdownRow[] = [
-          ...trackedItems.map((item) => row(item.id, item.label, item.ownedCards)),
-          row("__collection", "Other cards in My Collection", [...allKeys].filter((k) => !inSets.has(k))),
-        ]
-          .filter((r) => r.ownedCount > 0)
-          .sort((a, b) => b.value - a.value);
-        setBreakdown(rows);
-
-        const today = new Date().toISOString().slice(0, 10);
-        await supabase.from("portfolio_snapshots").upsert(
-          { user_id: user!.id, value: Math.round(total * 100) / 100, card_count: count, recorded_at: today },
-          { onConflict: "user_id,recorded_at" }
-        );
-
-        const { data } = await supabase
-          .from("portfolio_snapshots")
-          .select("recorded_at, value")
-          .eq("user_id", user!.id)
-          .order("recorded_at", { ascending: true })
-          .limit(90);
-        setSnapshots(
-          (data ?? []).map((r: { recorded_at: string; value: string }) => ({
-            recorded_at: r.recorded_at,
-            value: Number(r.value),
-          }))
-        );
-      } finally {
-        setLoading(false);
-      }
+  // Cards with a price paid recorded: what they cost and what they're worth now.
+  const costBasis = useMemo(() => {
+    if (!valuation) return null;
+    let paid = 0, worth = 0, copies = 0;
+    for (const key of valuation.keys) {
+      const d = details.get(key);
+      if (d?.purchasePrice == null) continue;
+      paid += d.purchasePrice * d.quantity;
+      worth += (valuation.unitValue(key) ?? 0) * d.quantity;
+      copies += d.quantity;
     }
-    compute();
-  }, [user, authLoading, trackedItems, collectionCardIds, details]);
+    return copies > 0 ? { paid, worth, copies } : null;
+  }, [valuation, details]);
+
+  const breakdown = useMemo<BreakdownRow[]>(() => {
+    if (!valuation) return [];
+    const row = (id: string, label: string, keys: string[]): BreakdownRow => {
+      let itemValue = 0;
+      const itemCards: CardRow[] = keys.map((key) => {
+        const d = details.get(key);
+        const quantity = valuation.quantity(key);
+        const unit = valuation.unitValue(key);
+        const price = unit != null ? unit * quantity : null;
+        itemValue += price ?? 0;
+        const { cardId, variant } = parseOwnedKey(key);
+        const card = valuation.cardById.get(cardId);
+        const name = card ? (variant ? `${card.name} (${VARIANT_LABELS[variant].long})` : card.name) : cardId;
+        const grade = d?.gradeCompany ? `${d.gradeCompany} ${d.grade ?? ""}`.trim() : null;
+        return {
+          id: key, name, number: card?.number ?? "", setTotal: card ? card.set.printedTotal ?? card.set.total : 0,
+          price, quantity, grade, condition: grade ? null : d?.condition ?? null,
+        };
+      });
+      itemCards.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
+      return { id, label, ownedCount: keys.length, value: itemValue, cards: itemCards };
+    };
+    const inSets = new Set(trackedItems.flatMap((t) => t.ownedCards));
+    return [
+      ...trackedItems.map((item) => row(item.id, item.label, item.ownedCards)),
+      row("__collection", "Other cards in My Collection", [...valuation.keys].filter((k) => !inSets.has(k))),
+    ]
+      .filter((r) => r.ownedCount > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [valuation, details, trackedItems]);
+
+  // Record today's value (one snapshot per day) and load the history.
+  const snapshotValue = valuation ? Math.round(valuation.total * 100) / 100 : null;
+  useEffect(() => {
+    if (!user || snapshotValue == null || cardCount === 0) return;
+    let cancelled = false;
+    (async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      await supabase.from("portfolio_snapshots").upsert(
+        { user_id: user.id, value: snapshotValue, card_count: cardCount, recorded_at: today },
+        { onConflict: "user_id,recorded_at" }
+      );
+      const { data } = await supabase
+        .from("portfolio_snapshots")
+        .select("recorded_at, value")
+        .eq("user_id", user.id)
+        .order("recorded_at", { ascending: true })
+        .limit(90);
+      if (cancelled) return;
+      setSnapshots((data ?? []).map((r: { recorded_at: string; value: string }) => ({ recorded_at: r.recorded_at, value: Number(r.value) })));
+    })();
+    return () => { cancelled = true; };
+  }, [user, snapshotValue, cardCount]);
 
   if (authLoading || !user) {
     return (

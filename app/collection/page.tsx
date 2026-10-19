@@ -19,6 +19,7 @@ import { extrasFromDetails } from "@/lib/trade";
 import { setFitsCard, setsHoldingCard } from "@/lib/setMembership";
 import AddToSetsSheet, { addedIntro } from "@/app/components/AddToSetsSheet";
 import { useAddToCollection } from "@/lib/addCopies";
+import { useCollectionValue } from "@/lib/collectionValue";
 import { useConfirm } from "@/lib/confirm";
 
 export default function CollectionPage() {
@@ -27,6 +28,7 @@ export default function CollectionPage() {
   const { collectionCardIds, removeCollectionCard, isInCollection, trackedItems, toggleCard } = useStore();
   const { details, available, saveDetails } = useCardData();
   const addToCollection = useAddToCollection();
+  const { valuation } = useCollectionValue();
   const confirm = useConfirm();
   const extraCount = extrasFromDetails(details).reduce((n, e) => n + e.count, 0);
 
@@ -236,12 +238,27 @@ export default function CollectionPage() {
 
       {/* Header card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">My Collection</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {ownedCount === 0
-            ? "No cards yet"
-            : `${ownedCount} card${ownedCount === 1 ? "" : "s"} owned, including everything checked off in your master sets`}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">My Collection</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {ownedCount === 0
+                ? "No cards yet"
+                : `${ownedCount} card${ownedCount === 1 ? "" : "s"} owned, including everything checked off in your master sets`}
+            </p>
+          </div>
+          {/* Same total as Portfolio (lib/collectionValue.ts): your cards' conditions and copies. */}
+          {ownedCount > 0 && (
+            <Link href="/portfolio" className="shrink-0 text-right group" aria-label={valuation ? `Total value $${valuation.total.toFixed(2)}, open Portfolio` : "Total value, open Portfolio"}>
+              <span className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Total value</span>
+              {valuation ? (
+                <span className="block text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400 group-hover:underline">${valuation.total.toFixed(2)}</span>
+              ) : (
+                <span className="block h-7 w-20 mt-1 ml-auto rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
+              )}
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Portfolio lives under Collection in the phone tab bar. */}
