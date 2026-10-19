@@ -23,7 +23,8 @@ export default function PrivacyPage() {
         <li><strong>Account information:</strong> your email address and password. Passwords are stored securely
           (hashed) by our authentication provider; we never see them.</li>
         <li><strong>Collection data:</strong> the master sets you track, the cards you mark as owned, your custom
-          sets and My Collection cards, and daily snapshots of your collection’s estimated value.</li>
+          sets and My Collection cards, your want list and target prices, details you add about your copies
+          (quantity, condition, grade and price paid), and daily snapshots of your collection’s estimated value.</li>
       </ul>
       <p>
         We don’t collect your name, location, contacts or device identifiers, and the app contains no

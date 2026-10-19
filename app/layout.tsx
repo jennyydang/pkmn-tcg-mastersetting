@@ -4,6 +4,7 @@ import "./globals.css";
 import { StoreProvider } from "@/lib/store";
 import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
+import { CardDataProvider } from "@/lib/cardData";
 import HeaderActions from "./components/HeaderActions";
 import SyncErrorBanner from "./components/SyncErrorBanner";
 import AnnouncementBanner from "./components/AnnouncementBanner";
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <AuthProvider>
             <StoreProvider>
+            <CardDataProvider>
               <header className="sticky top-0 z-40 pt-[env(safe-area-inset-top)] bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
                   <Link href="/" className="flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100 hover:opacity-80 transition-opacity">
@@ -50,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))]">
                 {children}
               </main>
+            </CardDataProvider>
             </StoreProvider>
           </AuthProvider>
         </ThemeProvider>

@@ -94,10 +94,13 @@ interface Props {
 export default function CardGrid({ tiles, onToggle }: Props) {
   const [priceOpen, setPriceOpen]       = useState(false);
   const [priceCard, setPriceCard]       = useState<PokemonCard | null>(null);
+  const [priceTile, setPriceTile]       = useState<CardTile | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
 
   // Card lists don't include prices; fetch the full card when its price is opened.
-  async function openPrice(card: PokemonCard) {
+  async function openPrice(tile: CardTile) {
+    const card = tile.card;
+    setPriceTile(tile);
     setPriceCard(card);
     setPriceOpen(true);
     setPriceLoading(true);
@@ -118,7 +121,7 @@ export default function CardGrid({ tiles, onToggle }: Props) {
             key={tile.key}
             tile={tile}
             onToggle={() => onToggle(tile.key)}
-            onInfo={() => openPrice(tile.card)}
+            onInfo={() => openPrice(tile)}
           />
         ))}
       </div>
@@ -126,6 +129,8 @@ export default function CardGrid({ tiles, onToggle }: Props) {
         <CardPriceModal
           card={priceCard}
           loading={priceLoading}
+          cardKey={priceTile?.key}
+          owned={priceTile?.owned}
           onClose={() => { setPriceOpen(false); setPriceCard(null); }}
         />
       )}

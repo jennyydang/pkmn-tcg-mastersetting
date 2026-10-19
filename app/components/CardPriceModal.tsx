@@ -3,11 +3,17 @@
 import { PokemonCard } from "@/lib/types";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { CopyDetailsForm, WantControls } from "./CardExtras";
+import { parseOwnedKey, variantPrice } from "@/lib/variants";
 
 interface Props {
   card: PokemonCard | null;
   loading: boolean;
   onClose: () => void;
+  /** Owned-entry key for the version shown (see lib/variants.ts); defaults to the card. */
+  cardKey?: string;
+  /** Show the My copies section (quantity, condition, price paid). */
+  owned?: boolean;
 }
 
 function formatPriceType(key: string) {
@@ -19,7 +25,7 @@ function fmt(n?: number) {
   return `$${n.toFixed(2)}`;
 }
 
-export default function CardPriceModal({ card, loading, onClose }: Props) {
+export default function CardPriceModal({ card, loading, onClose, cardKey, owned = false }: Props) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -127,6 +133,19 @@ export default function CardPriceModal({ card, loading, onClose }: Props) {
               </>
             )}
           </div>
+
+          {/* Want list and owned-copy details */}
+          {card && !loading && (
+            <div className="space-y-3 pb-4">
+              <WantControls cardKey={cardKey ?? card.id} />
+              {owned && (
+                <CopyDetailsForm
+                  cardKey={cardKey ?? card.id}
+                  marketPrice={variantPrice(card, parseOwnedKey(cardKey ?? card.id).variant)}
+                />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Sticky footer */}

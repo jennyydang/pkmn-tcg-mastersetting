@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
+import { useCardData } from "@/lib/cardData";
 import { useAuth } from "@/lib/auth";
 import { getCardsByIds } from "@/lib/api";
 import { VARIANT_LABELS, ownedCardIds, parseOwnedKey, variantPrice } from "@/lib/variants";
@@ -28,7 +29,10 @@ interface CardRow {
   name: string;
   number: string;
   setTotal: number;
+  /** Value of all copies (market price × quantity). */
   price: number | null;
+  quantity: number;
+  grade: string | null;
 }
 
 interface BreakdownRow {
@@ -43,10 +47,13 @@ export default function PortfolioPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { trackedItems } = useStore();
+  const { details } = useCardData();
 
   const [loading, setLoading] = useState(true);
   const [totalValue, setTotalValue] = useState(0);
   const [cardCount, setCardCount] = useState(0);
+  // Cards with a price paid recorded: what they cost and what they're worth now.
+  const [costBasis, setCostBasis] = useState<{ paid: number; worth: number; copies: number } | null>(null);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [breakdown, setBreakdown] = useState<BreakdownRow[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -93,20 +100,37 @@ export default function PortfolioPage() {
           if (market != null) priceMap.set(key, market);
         }
 
-        let total = 0;
-        for (const [, price] of priceMap) total += price;
-        const count = priceMap.size;
+        // Each owned version counts once overall (even if it's in several master
+        // sets), times the number of copies recorded for it.
+        const qty = (key: string) => details.get(key)?.quantity ?? 1;
+        let total = 0, count = 0, paid = 0, worth = 0, paidCopies = 0;
+        for (const [key, price] of priceMap) {
+          total += price * qty(key);
+          count += qty(key);
+        }
+        for (const key of allKeys) {
+          const d = details.get(key);
+          if (d?.purchasePrice == null) continue;
+          paid += d.purchasePrice * d.quantity;
+          worth += (priceMap.get(key) ?? 0) * d.quantity;
+          paidCopies += d.quantity;
+        }
         setTotalValue(total);
         setCardCount(count);
+        setCostBasis(paidCopies > 0 ? { paid, worth, copies: paidCopies } : null);
 
         const rows: BreakdownRow[] = trackedItems
           .map((item) => {
             let itemValue = 0;
             const itemCards: CardRow[] = item.ownedCards.map((cardId) => {
-              const price = priceMap.get(cardId) ?? null;
+              const d = details.get(cardId);
+              const quantity = d?.quantity ?? 1;
+              const unit = priceMap.get(cardId);
+              const price = unit != null ? unit * quantity : null;
               itemValue += price ?? 0;
               const info = cardInfoMap.get(cardId);
-              return { id: cardId, name: info?.name ?? cardId, number: info?.number ?? "", setTotal: info?.setTotal ?? 0, price };
+              const grade = d?.gradeCompany ? `${d.gradeCompany} ${d.grade ?? ""}`.trim() : null;
+              return { id: cardId, name: info?.name ?? cardId, number: info?.number ?? "", setTotal: info?.setTotal ?? 0, price, quantity, grade };
             });
             itemCards.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
             return { id: item.id, label: item.label, ownedCount: item.ownedCards.length, value: itemValue, cards: itemCards };
@@ -138,7 +162,7 @@ export default function PortfolioPage() {
       }
     }
     compute();
-  }, [user, authLoading, trackedItems]);
+  }, [user, authLoading, trackedItems, details]);
 
   if (authLoading || !user) {
     return (
@@ -174,6 +198,20 @@ export default function PortfolioPage() {
             <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{cardCount}</p>
           )}
         </div>
+        {!loading && costBasis && (
+          <div className="col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
+              Profit / Loss
+            </p>
+            <p className={`text-3xl font-bold ${costBasis.worth >= costBasis.paid ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+              {costBasis.worth >= costBasis.paid ? "+" : "−"}${Math.abs(costBasis.worth - costBasis.paid).toFixed(2)}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Paid ${costBasis.paid.toFixed(2)}, now worth ${costBasis.worth.toFixed(2)}, for the {costBasis.copies} {costBasis.copies === 1 ? "copy" : "copies"} with a price paid recorded.
+              Graded cards are valued at the ungraded price.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Line chart — always shown */}
@@ -253,7 +291,9 @@ export default function PortfolioPage() {
                           }`}
                         >
                           <p className="flex-1 min-w-0 text-sm text-gray-700 dark:text-gray-300 truncate">
+                            {card.quantity > 1 && <span className="font-semibold">{card.quantity}× </span>}
                             {card.name}
+                            {card.grade && <span className="ml-1 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[11px] font-semibold">{card.grade}</span>}
                             {card.number && (
                               <span className="text-gray-500 dark:text-gray-400 ml-1 font-mono">
                                 #{card.number}{card.setTotal > 0 ? `/${card.setTotal}` : ""}

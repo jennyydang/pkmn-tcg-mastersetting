@@ -27,6 +27,8 @@ interface StoreContextValue {
   isInCollection:      (cardId: string) => boolean;
   syncError:           string | null;
   clearSyncError:      () => void;
+  /** Show a load/save problem in the banner (used by lib/cardData.tsx). */
+  reportSyncError:     (message: string) => void;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -411,7 +413,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       isCardOwned, hasItem, updateTotal, reorderItems,
       addCustomCard, removeCustomCard, updateItem,
       collectionCardIds, addCollectionCard, removeCollectionCard, isInCollection,
-      syncError, clearSyncError: () => setSyncError(null),
+      syncError, clearSyncError: () => setSyncError(null), reportSyncError: setSyncError,
     }}>
       {children}
     </StoreContext.Provider>

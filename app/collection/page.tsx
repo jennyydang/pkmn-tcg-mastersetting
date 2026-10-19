@@ -296,7 +296,7 @@ export default function CollectionPage() {
 
       {/* Price modal */}
       {priceOpen && (
-        <CardPriceModal card={priceCard} loading={priceLoading} onClose={closePriceModal} />
+        <CardPriceModal card={priceCard} loading={priceLoading} onClose={closePriceModal} owned={!!priceCard && isInCollection(priceCard.id)} />
       )}
 
       {/* Scan sheet */}
