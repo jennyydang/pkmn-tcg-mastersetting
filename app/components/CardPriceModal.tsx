@@ -137,7 +137,11 @@ export default function CardPriceModal({ card, loading, onClose, cardKey, owned 
           {/* Want list and owned-copy details */}
           {card && !loading && (
             <div className="space-y-3 pb-4">
-              <WantControls cardKey={cardKey ?? card.id} />
+              <WantControls
+                cardKey={cardKey ?? card.id}
+                cardName={card.name}
+                marketPrice={variantPrice(card, parseOwnedKey(cardKey ?? card.id).variant)}
+              />
               {owned && (
                 <CopyDetailsForm
                   cardKey={cardKey ?? card.id}

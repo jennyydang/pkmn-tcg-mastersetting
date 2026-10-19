@@ -12,46 +12,94 @@ function parsePrice(text: string): number | null {
   return isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
 }
 
+const fmtPrice = (n: number) => `$${n.toFixed(2)}`;
+
 /** Star a card for the want list, with an optional target price. */
-export function WantControls({ cardKey }: { cardKey: string }) {
+export function WantControls({ cardKey, cardName, marketPrice }: { cardKey: string; cardName: string; marketPrice?: number }) {
   const { user } = useAuth();
   const { wants, isWanted, setWant } = useCardData();
   const wanted = isWanted(cardKey);
   const target = wants.get(cardKey) ?? null;
   const [targetText, setTargetText] = useState(target != null ? String(target) : "");
+  const [error, setError]           = useState<string | null>(null);
+  const [justSaved, setJustSaved]   = useState(false);
 
   if (!user) return null;
 
+  const typed = targetText.trim() ? parsePrice(targetText) : null;
+  const dirty = targetText.trim() ? typed !== target : target != null;
+
   function saveTarget() {
-    const next = targetText.trim() ? parsePrice(targetText) : null;
-    if (next !== target) setWant(cardKey, true, next);
-    setTargetText(next != null ? String(next) : "");
+    if (targetText.trim() && typed == null) {
+      setError("Enter a price like 40 or 12.50.");
+      return;
+    }
+    setError(null);
+    setWant(cardKey, true, typed);
+    setTargetText(typed != null ? String(typed) : "");
+    setJustSaved(true);
+  }
+
+  // What the saved target means right now, compared with today's price.
+  let status: string | null = null;
+  if (target != null) {
+    status = marketPrice == null
+      ? `We’ll flag ${cardName} when it’s ${fmtPrice(target)} or less.`
+      : marketPrice <= target
+        ? `It’s ${fmtPrice(marketPrice)} now, already at your target. It’s flagged on your want list.`
+        : `We’ll flag ${cardName} when it’s ${fmtPrice(target)} or less. It’s ${fmtPrice(marketPrice)} now.`;
   }
 
   return (
     <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 px-4 py-3 space-y-2">
       <button
-        onClick={() => setWant(cardKey, !wanted, wanted ? null : parsePrice(targetText))}
+        onClick={() => { setWant(cardKey, !wanted, wanted ? null : target); setJustSaved(false); setError(null); }}
         aria-pressed={wanted}
         className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200 min-h-[40px]"
       >
         <span className="text-lg" aria-hidden="true">{wanted ? "★" : "☆"}</span>
         {wanted ? "On your want list" : "Add to want list"}
       </button>
+
       {wanted && (
-        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-          <span className="shrink-0">Flag when it’s at or below $</span>
-          <input
-            inputMode="decimal"
-            placeholder="any price"
-            value={targetText}
-            onChange={(e) => setTargetText(e.target.value)}
-            onBlur={saveTarget}
-            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-            className={`${inputClass} w-28`}
-            aria-label="Target price in dollars"
-          />
-        </label>
+        <>
+          <form
+            onSubmit={(e) => { e.preventDefault(); saveTarget(); (document.activeElement as HTMLElement | null)?.blur(); }}
+            className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+          >
+            <label htmlFor={`target-${cardKey}`} className="shrink-0">Flag at or below $</label>
+            <input
+              id={`target-${cardKey}`}
+              inputMode="decimal"
+              enterKeyHint="done"
+              placeholder="any price"
+              value={targetText}
+              onChange={(e) => { setTargetText(e.target.value); setJustSaved(false); setError(null); }}
+              className={`${inputClass} flex-1 min-w-0`}
+              aria-label="Target price in dollars"
+            />
+            <button
+              type="submit"
+              disabled={!dirty}
+              className="shrink-0 px-4 min-h-[40px] rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-sm font-semibold text-white transition-colors"
+            >
+              Set
+            </button>
+          </form>
+
+          {error ? (
+            <p className="text-sm text-red-500 dark:text-red-400" role="alert">{error}</p>
+          ) : dirty ? (
+            <p className="text-xs text-gray-500 dark:text-gray-400">Tap Set to save your target price.</p>
+          ) : justSaved ? (
+            <p className="flex items-start gap-1.5 text-sm font-medium text-green-700 dark:text-green-400" role="status">
+              <span aria-hidden="true">✓</span>
+              <span>{target != null ? `Target set. ${status}` : "Target removed. It’s still on your want list."}</span>
+            </p>
+          ) : status ? (
+            <p className="text-xs text-gray-600 dark:text-gray-400">{status}</p>
+          ) : null}
+        </>
       )}
     </div>
   );
