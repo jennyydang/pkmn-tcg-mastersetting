@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { getCardsForSet, getSetCatalog, normalizeNumber } from "./api";
 import { legacySetToTcgdex } from "./legacyIds";
+import { parseOwnedKey } from "./variants";
 import { CustomCardDef, PokemonCard, TrackedMasterSet } from "./types";
 
 // One-time conversion of saved pokemontcg.io IDs ("sv3pt5-25", set "sv3pt5") to
@@ -68,7 +69,7 @@ export async function migrateToTcgdexIds(userId: string, data: SavedData): Promi
   // ── Resolve every saved card ID (unmatched IDs map to themselves) ─────────
   const allIds = new Set<string>(data.collection);
   for (const item of data.items) {
-    item.ownedCards.forEach((id) => allIds.add(id));
+    item.ownedCards.forEach((key) => allIds.add(parseOwnedKey(key).cardId));
     item.customCards?.forEach((c) => allIds.add(c.id));
   }
   const imageCardIds = new Map<string, string>(); // legacy image URL → legacy card ID
@@ -83,7 +84,12 @@ export async function migrateToTcgdexIds(userId: string, data: SavedData): Promi
     const card = await resolveCard(id);
     if (card) resolved.set(id, card);
   }));
-  const newCardId = (id: string) => resolved.get(id)?.id ?? id;
+  // Owned entries may name a version ("<card id>|reverse"); convert the card part only.
+  const newCardId = (key: string) => {
+    const { cardId, variant } = parseOwnedKey(key);
+    const id = resolved.get(cardId)?.id ?? cardId;
+    return variant ? `${id}|${variant}` : id;
+  };
 
   function newImage(item: { type?: string; id?: string; image: string }): string {
     if (!item.image?.startsWith("https://images.pokemontcg.io/")) return item.image;

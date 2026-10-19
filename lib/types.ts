@@ -19,6 +19,8 @@ export interface TCGPlayerPrice {
   directLow?: number;
 }
 
+export type CardVariant = "normal" | "holo" | "reverse" | "firstEdition";
+
 export interface PokemonCard {
   id: string;
   name: string;
@@ -29,6 +31,8 @@ export interface PokemonCard {
     large: string;
   };
   set: PokemonSet;
+  /** Printed versions, base first (see lib/variants.ts). Missing = unknown, treated as one. */
+  variants?: CardVariant[];
   tcgplayer?: {
     url?: string;
     updatedAt?: string;

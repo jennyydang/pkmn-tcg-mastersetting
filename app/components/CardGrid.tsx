@@ -1,26 +1,36 @@
 "use client";
 
+import { getCard } from "@/lib/api";
 import { PokemonCard } from "@/lib/types";
+import { VARIANT_LABELS, cardVariants, ownedKey } from "@/lib/variants";
 import Image from "next/image";
 import { useState } from "react";
 import CardPriceModal from "./CardPriceModal";
 
 interface CardItemProps {
   card: PokemonCard;
-  owned: boolean;
-  onToggle: () => void;
+  ownedKeys: Set<string>;
+  showVariants: boolean;
+  onToggle: (key: string) => void;
   onInfo: () => void;
 }
 
-function CardItem({ card, owned, onToggle, onInfo }: CardItemProps) {
+function CardItem({ card, ownedKeys, showVariants, onToggle, onInfo }: CardItemProps) {
   const [imgError, setImgError] = useState(false);
+  const variants = cardVariants(card);
+  const keys = variants.map((v) => ownedKey(card, v));
+  // Tapping the card marks its base version; the chips below mark each version.
+  const baseOwned = ownedKeys.has(keys[0]);
+  // Any owned version counts as owning the card; the check means nothing's left to get.
+  const owned = keys.some((k) => ownedKeys.has(k));
+  const complete = showVariants ? keys.every((k) => ownedKeys.has(k)) : owned;
 
   return (
     <div className="relative">
       <button
-        onClick={onToggle}
-        aria-label={`${card.name} #${card.number} — ${owned ? "Owned, click to unmark" : "Not owned, click to mark as owned"}`}
-        aria-pressed={owned}
+        onClick={() => onToggle(keys[0])}
+        aria-label={`${card.name} #${card.number} — ${baseOwned ? "Owned, click to unmark" : "Not owned, click to mark as owned"}`}
+        aria-pressed={baseOwned}
         className={`relative w-full rounded-lg overflow-hidden transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 hover:scale-105 ${
           owned ? "opacity-100 shadow-md" : "opacity-50 hover:opacity-70"
         }`}
@@ -42,7 +52,7 @@ function CardItem({ card, owned, onToggle, onInfo }: CardItemProps) {
             <span>#{card.number}</span>
           </div>
         )}
-        {owned && (
+        {complete && (
           <div className="absolute top-1 right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow" aria-hidden="true">
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -59,18 +69,60 @@ function CardItem({ card, owned, onToggle, onInfo }: CardItemProps) {
           <span className="text-white text-[10px] font-bold leading-none">i</span>
         </span>
       </button>
+      {showVariants && variants.length > 1 && (
+        <div className="flex gap-1 mt-1" role="group" aria-label={`${card.name} versions`}>
+          {variants.map((v, i) => {
+            const has = ownedKeys.has(keys[i]);
+            return (
+              <button
+                key={v}
+                onClick={() => onToggle(keys[i])}
+                aria-pressed={has}
+                aria-label={`${card.name} ${VARIANT_LABELS[v].long}: ${has ? "owned" : "not owned"}`}
+                title={VARIANT_LABELS[v].long}
+                className={`flex-1 min-h-[28px] rounded-md text-[11px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  has
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                }`}
+              >
+                {VARIANT_LABELS[v].short}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
 interface Props {
   cards: PokemonCard[];
-  isOwned: (cardId: string) => boolean;
-  onToggle: (cardId: string) => void;
+  /** Owned entries (see lib/variants.ts for the key format). */
+  ownedKeys: Set<string>;
+  /** Show a chip per printed version so each can be marked separately. */
+  showVariants: boolean;
+  onToggle: (key: string) => void;
 }
 
-export default function CardGrid({ cards, isOwned, onToggle }: Props) {
-  const [priceCard, setPriceCard] = useState<PokemonCard | null>(null);
+export default function CardGrid({ cards, ownedKeys, showVariants, onToggle }: Props) {
+  const [priceOpen, setPriceOpen]       = useState(false);
+  const [priceCard, setPriceCard]       = useState<PokemonCard | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+
+  // Card lists don't include prices; fetch the full card when its price is opened.
+  async function openPrice(card: PokemonCard) {
+    setPriceCard(card);
+    setPriceOpen(true);
+    setPriceLoading(true);
+    try {
+      setPriceCard(await getCard(card.id));
+    } catch {
+      // Keep the list version; the modal shows that no price is available.
+    } finally {
+      setPriceLoading(false);
+    }
+  }
 
   return (
     <>
@@ -79,13 +131,20 @@ export default function CardGrid({ cards, isOwned, onToggle }: Props) {
           <CardItem
             key={card.id}
             card={card}
-            owned={isOwned(card.id)}
-            onToggle={() => onToggle(card.id)}
-            onInfo={() => setPriceCard(card)}
+            ownedKeys={ownedKeys}
+            showVariants={showVariants}
+            onToggle={onToggle}
+            onInfo={() => openPrice(card)}
           />
         ))}
       </div>
-      {priceCard && <CardPriceModal card={priceCard} loading={false} onClose={() => setPriceCard(null)} />}
+      {priceOpen && (
+        <CardPriceModal
+          card={priceCard}
+          loading={priceLoading}
+          onClose={() => { setPriceOpen(false); setPriceCard(null); }}
+        />
+      )}
     </>
   );
 }

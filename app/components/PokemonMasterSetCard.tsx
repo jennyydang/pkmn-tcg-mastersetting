@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ownedCardIds } from "@/lib/variants";
 import Link from "next/link";
 import Image from "next/image";
 import { useSortable } from "@dnd-kit/sortable";
@@ -17,7 +18,8 @@ interface Props {
 export default function MasterSetCard({ tracked, isEditing, onActivateEdit }: Props) {
   const { removeItem } = useStore();
   const { id, label, image, totalCards, ownedCards, type, subtitle } = tracked;
-  const owned = ownedCards.length;
+  // Count cards, not versions: a card with several owned versions counts once.
+  const owned = ownedCardIds(ownedCards).size;
   const pct = totalCards > 0 ? Math.round((owned / totalCards) * 100) : 0;
   const complete = totalCards > 0 && owned >= totalCards;
 

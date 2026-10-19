@@ -6,8 +6,8 @@ import { getSet, getCardsForSet } from "@/lib/api";
 import { PokemonCard, PokemonSet } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
-import CardGrid from "@/app/components/CardGrid";
-import ProgressBar from "@/app/components/ProgressBar";
+import MasterSetCards from "@/app/components/MasterSetCards";
+import MasterSetProgress from "@/app/components/MasterSetProgress";
 import CollectionEditSheet from "@/app/components/CollectionEditSheet";
 import { ChevronRightIcon } from "@/app/components/Icons";
 import Image from "next/image";
@@ -22,6 +22,8 @@ export default function SetMasterSetPage() {
     </Suspense>
   );
 }
+
+const EMPTY: string[] = [];
 
 function PageSpinner() {
   return (
@@ -39,16 +41,15 @@ function SetMasterSetView() {
   const [cards, setCards] = useState<PokemonCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "owned" | "missing">("all");
   const [editOpen, setEditOpen] = useState(false);
-  const { isCardOwned, toggleCard, hasItem, addItem, updateTotal, removeItem, updateItem, trackedItems } = useStore();
+  const { toggleCard, hasItem, addItem, updateTotal, removeItem, updateItem, trackedItems } = useStore();
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/");
   }, [user, authLoading, router]);
 
   const tracked = trackedItems.find((t) => t.id === id && t.type === "set");
-  const ownedCount = tracked?.ownedCards.length ?? 0;
+  const ownedKeys = tracked?.ownedCards ?? EMPTY;
   const displayName = tracked?.label ?? set?.name ?? "";
   const displaySubtitle = tracked?.subtitle ?? (set ? `${set.series} · Released ${set.releaseDate} · ${cards.length} cards` : "");
 
@@ -80,12 +81,6 @@ function SetMasterSetView() {
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  const filteredCards = cards.filter((card) => {
-    if (filter === "owned") return isCardOwned(id, card.id);
-    if (filter === "missing") return !isCardOwned(id, card.id);
-    return true;
-  });
 
   if (authLoading || !user) return (
     <div className="flex items-center justify-center py-32">
@@ -137,31 +132,12 @@ function SetMasterSetView() {
               )}
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{displaySubtitle}</p>
-            <ProgressBar owned={ownedCount} total={cards.length} />
-            {ownedCount >= cards.length && cards.length > 0 && (
-              <div className="mt-3 inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
-                🏆 Master Set Complete!
-              </div>
-            )}
+            <MasterSetProgress cards={cards} ownedKeys={ownedKeys} completeLabel="Master Set Complete!" />
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mb-5" role="group" aria-label="Filter cards">
-        {(["all", "owned", "missing"] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)}
-            aria-pressed={filter === f}
-            className={`px-4 py-2 min-h-[44px] rounded-full text-sm font-medium transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${filter === f ? "bg-blue-600 text-white shadow-sm" : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-400"}`}>
-            {f === "all" ? `All (${cards.length})` : f === "owned" ? `Owned (${ownedCount})` : `Missing (${cards.length - ownedCount})`}
-          </button>
-        ))}
-      </div>
-
-      {filteredCards.length > 0 ? (
-        <CardGrid cards={filteredCards} isOwned={(cid) => isCardOwned(id, cid)} onToggle={(cid) => toggleCard(id, cid)} />
-      ) : (
-        <div className="py-16 text-center text-gray-400 dark:text-gray-600"><p className="text-lg">No cards to show</p></div>
-      )}
+      <MasterSetCards cards={cards} ownedKeys={ownedKeys} onToggle={(k) => toggleCard(id, k)} />
 
       {editOpen && tracked && (
         <CollectionEditSheet

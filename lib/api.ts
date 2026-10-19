@@ -1,5 +1,6 @@
-import { PokemonCard, PokemonSet, TCGPlayerPrice } from "./types";
+import { CardVariant, PokemonCard, PokemonSet, TCGPlayerPrice } from "./types";
 import { legacyImageUrl } from "./legacyIds";
+import { VARIANT_ORDER } from "./variants";
 
 // Card data comes from TCGdex (https://tcgdex.dev). GraphQL is used for searches and
 // card lists (one request returns each card's set); REST is used for single cards
@@ -84,12 +85,13 @@ interface RawCard {
   image?: string | null;
   rarity?: string | null;
   set: { id: string };
+  variants?: Partial<Record<CardVariant, boolean>> | null;
   pricing?: {
     tcgplayer?: { updated?: string; unit?: string } & Record<string, RawTcgplayerPrice | string | undefined>;
   } | null;
 }
 
-const CARD_FIELDS = "id localId name image rarity set { id }";
+const CARD_FIELDS = "id localId name image rarity set { id } variants { normal reverse holo firstEdition }";
 
 // ── Set catalog (every set, fetched once per page load) ─────────────────────
 
@@ -169,6 +171,7 @@ function toCard(raw: RawCard, set: PokemonSet): PokemonCard {
     rarity: raw.rarity && raw.rarity !== "None" ? raw.rarity : undefined,
     images: { small: cardImage(raw, set.id, "low"), large: cardImage(raw, set.id, "high") },
     set,
+    variants: raw.variants ? VARIANT_ORDER.filter((v) => raw.variants![v]) : undefined,
     tcgplayer: toTcgplayer(raw.pricing),
   };
 }
@@ -351,11 +354,19 @@ export async function getSet(id: string): Promise<PokemonSet> {
 }
 
 export async function getCardsForSet(setId: string): Promise<PokemonCard[]> {
-  const set = await getSet(setId);
-  const raw = await restFetch<{ cards: { id: string; localId: string; name: string; image?: string }[] }>(
-    `/sets/${encodeURIComponent(setId)}`
-  );
-  return raw.cards.map((c) => toCard({ ...c, set: { id: setId } }, set));
+  // REST gives the set's cards in printed order; GraphQL adds each card's variants
+  // (the ID filter matches substrings, hence the set check). If GraphQL fails the
+  // set still loads, with every card counted as a single version.
+  const [set, raw, withVariants] = await Promise.all([
+    getSet(setId),
+    restFetch<{ cards: { id: string; localId: string; name: string; image?: string }[] }>(`/sets/${encodeURIComponent(setId)}`),
+    gql<{ cards: Pick<RawCard, "id" | "set" | "variants">[] }>(
+      `query ($prefix: ID) { cards(filters: { id: $prefix }) { id set { id } variants { normal reverse holo firstEdition } } }`,
+      { prefix: `${setId}-` }
+    ).catch((e) => { console.error("Couldn't load variants", e); return { cards: [] }; }),
+  ]);
+  const variants = new Map(withVariants.cards.filter((c) => c.set?.id === setId).map((c) => [c.id, c.variants]));
+  return raw.cards.map((c) => toCard({ ...c, set: { id: setId }, variants: variants.get(c.id) }, set));
 }
 
 // Fetches full cards (with prices) a few at a time. Unknown IDs are skipped.

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { getCardsByIds } from "@/lib/api";
+import { VARIANT_LABELS, ownedCardIds, parseOwnedKey, variantPrice } from "@/lib/variants";
 import { supabase } from "@/lib/supabase";
 import { ChevronRightIcon } from "@/app/components/Icons";
 import {
@@ -70,21 +71,26 @@ export default function PortfolioPage() {
     async function compute() {
       setLoading(true);
       try {
-        const allIds = new Set<string>();
+        // Owned entries can be a specific version ("<card id>|reverse"); each is
+        // priced as that version.
+        const allKeys = new Set<string>();
         for (const item of trackedItems) {
-          for (const cardId of item.ownedCards) allIds.add(cardId);
+          for (const key of item.ownedCards) allKeys.add(key);
         }
 
-        const cards = await getCardsByIds([...allIds]);
+        const cards = await getCardsByIds([...ownedCardIds([...allKeys])]);
+        const cardById = new Map(cards.map((c) => [c.id, c]));
 
         const cardInfoMap = new Map<string, { name: string; number: string; setTotal: number }>();
         const priceMap = new Map<string, number>();
-        for (const card of cards) {
-          cardInfoMap.set(card.id, { name: card.name, number: card.number, setTotal: card.set.printedTotal ?? card.set.total });
-          const prices = card.tcgplayer?.prices;
-          if (!prices) continue;
-          const market = Object.values(prices).find((p) => p.market != null)?.market;
-          if (market != null) priceMap.set(card.id, market);
+        for (const key of allKeys) {
+          const { cardId, variant } = parseOwnedKey(key);
+          const card = cardById.get(cardId);
+          if (!card) continue;
+          const name = variant ? `${card.name} (${VARIANT_LABELS[variant].long})` : card.name;
+          cardInfoMap.set(key, { name, number: card.number, setTotal: card.set.printedTotal ?? card.set.total });
+          const market = variantPrice(card, variant);
+          if (market != null) priceMap.set(key, market);
         }
 
         let total = 0;
