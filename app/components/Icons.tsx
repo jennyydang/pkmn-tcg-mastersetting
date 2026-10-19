@@ -44,18 +44,6 @@ export function ChevronRightIcon({ className }: IconProps) {
   );
 }
 
-export function PokeBallIcon({ className }: IconProps) {
-  return (
-    <svg className={className} viewBox="0 0 100 100" fill="currentColor">
-      <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="4"/>
-      <path d="M2 50h96" stroke="currentColor" strokeWidth="4"/>
-      <path d="M2 50C2 23.5 23.5 2 50 2s48 21.5 48 48" fill="#e63946" opacity="0.8"/>
-      <circle cx="50" cy="50" r="12" fill="white" stroke="currentColor" strokeWidth="4"/>
-      <circle cx="50" cy="50" r="6" fill="currentColor"/>
-    </svg>
-  );
-}
-
 // Outline icons (Heroicons paths) used in place of emoji so icons match the
 // app's style and colour in light and dark mode.
 function OutlineIcon({ className, d, strokeWidth = 2, filled = false }: IconProps & { d: string; strokeWidth?: number; filled?: boolean }) {

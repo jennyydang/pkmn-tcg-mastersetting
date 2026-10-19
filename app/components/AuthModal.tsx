@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { APP_NAME } from "@/lib/appInfo";
 import { useAuth } from "@/lib/auth";
-import { PokeBallIcon } from "./Icons";
+import AppLogo from "./AppLogo";
 
 export default function AuthModal() {
   const { signIn, signUp, resetPassword } = useAuth();
@@ -48,8 +48,8 @@ export default function AuthModal() {
     <div className="fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="dialog-in bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-b from-red-50 to-white dark:from-gray-700 dark:to-gray-800 px-6 pt-8 pb-6 flex flex-col items-center gap-3">
-          <PokeBallIcon className="w-12 h-12 text-red-500" />
+        <div className="bg-gradient-to-b from-blue-50 to-white dark:from-gray-700 dark:to-gray-800 px-6 pt-8 pb-6 flex flex-col items-center gap-3">
+          <AppLogo className="w-14 h-14 shadow-md rounded-[22%]" />
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{APP_NAME}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
             {mode === "signin"

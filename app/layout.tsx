@@ -9,7 +9,7 @@ import HeaderActions from "./components/HeaderActions";
 import BottomNav from "./components/BottomNav";
 import SyncErrorBanner from "./components/SyncErrorBanner";
 import AnnouncementBanner from "./components/AnnouncementBanner";
-import { PokeBallIcon } from "./components/Icons";
+import AppLogo from "./components/AppLogo";
 import Link from "next/link";
 import { APP_NAME } from "@/lib/appInfo";
 
@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <header className="sticky top-0 z-40 pt-[env(safe-area-inset-top)] bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
                   <Link href="/" className="flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100 hover:opacity-80 transition-opacity">
-                    <PokeBallIcon className="w-7 h-7 text-red-500" />
+                    <AppLogo className="w-7 h-7" />
                     <span className="text-sm">{APP_NAME}</span>
                   </Link>
                   <HeaderActions />

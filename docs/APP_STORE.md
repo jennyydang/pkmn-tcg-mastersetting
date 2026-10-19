@@ -83,8 +83,6 @@ Nintendo/The Pokémon Company actively enforce theirs. To reduce the risk:
   "Master set tracker for TCG collectors" is safer than any wording containing "Pokémon".
 - "pocketi" sits close to "Pokémon TCG Pocket" (The Pokémon Company's own app). Check the name isn't
   taken or confusingly similar before submitting: search the App Store and USPTO/EUIPO trademarks.
-- The in-app header logo (`PokeBallIcon` in `app/components/Icons.tsx`) is a Poké Ball, which is a
-  trademarked design. Swap it for the app icon artwork before submitting.
 - Keep the "unofficial, not affiliated" disclaimer (on the Support page) and say the same in the App Store
   description.
 - Card images are copyrighted. Collection apps that show them do get approved, but Apple may still ask
