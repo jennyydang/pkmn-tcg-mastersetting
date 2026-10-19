@@ -51,3 +51,10 @@ export type CardView = "grid" | "binder";
 export function useCardView() {
   return usePref<CardView>("pkmn-card-view", "grid", ["grid", "binder"]);
 }
+
+export type ScanMode = "single" | "batch";
+
+/** Scanner: show each card's prices, or scan many in a row and add them together. */
+export function useScanMode() {
+  return usePref<ScanMode>("pocketi-scan-mode", "single", ["single", "batch"]);
+}

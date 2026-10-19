@@ -13,12 +13,16 @@ import CardPriceModal from "@/app/components/CardPriceModal";
 import CollectionMasterSets from "@/app/components/CollectionMasterSets";
 import { ownedCardIds } from "@/lib/variants";
 import { staggerStyle } from "@/lib/motion";
-import { CameraIcon, CardsIcon, ChevronRightIcon, SearchIcon, TrendingUpIcon } from "@/app/components/Icons";
+import { CameraIcon, CardsIcon, ChevronRightIcon, SearchIcon, SwapIcon, TrendingUpIcon } from "@/app/components/Icons";
+import { useCardData } from "@/lib/cardData";
+import { extrasFromDetails } from "@/lib/trade";
 
 export default function CollectionPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { collectionCardIds, addCollectionCard, removeCollectionCard, isInCollection, trackedItems } = useStore();
+  const { details } = useCardData();
+  const extraCount = extrasFromDetails(details).reduce((n, e) => n + e.count, 0);
 
   const [cards, setCards]               = useState<PokemonCard[]>([]);
   const [loading, setLoading]           = useState(true);
@@ -163,7 +167,8 @@ export default function CollectionPage() {
       </div>
 
       {/* Portfolio lives under Collection in the phone tab bar. */}
-      <Link href="/portfolio" className="tile flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 px-5 py-4 mb-6 shadow-sm">
+      <div className="grid sm:grid-cols-2 gap-3 mb-6">
+      <Link href="/portfolio" className="tile flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 px-5 py-4 shadow-sm">
         <span className="flex items-center gap-3">
           <span className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
             <TrendingUpIcon className="w-5 h-5" />
@@ -175,6 +180,19 @@ export default function CollectionPage() {
         </span>
         <ChevronRightIcon className="w-5 h-5 text-gray-400" />
       </Link>
+      <Link href="/extras" className="tile flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 px-5 py-4 shadow-sm">
+        <span className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-400 flex items-center justify-center">
+            <SwapIcon className="w-5 h-5" />
+          </span>
+          <span>
+            <span className="block font-semibold text-gray-900 dark:text-gray-100">Extras for trade</span>
+            <span className="block text-xs text-gray-500 dark:text-gray-400">{extraCount > 0 ? `${extraCount} duplicate ${extraCount === 1 ? "copy" : "copies"} · share your trade list` : "Your duplicates, ready to share"}</span>
+          </span>
+        </span>
+        <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+      </Link>
+      </div>
 
       {/* Add row: search + scan */}
       <div className="flex gap-2 mb-6">

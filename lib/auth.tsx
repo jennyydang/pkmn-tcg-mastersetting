@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { User, AuthError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { siteUrl } from "./appInfo";
 
 interface AuthContextValue {
   user: User | null;
@@ -19,11 +20,6 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// Where emailed links (password reset) should open. Inside the iOS app the origin
-// is capacitor://localhost, which a browser can't open, so use the hosted site.
-function siteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser]       = useState<User | null>(null);

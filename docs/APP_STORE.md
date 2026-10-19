@@ -31,7 +31,7 @@ baked into the bundle at build time):
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key |
-| `NEXT_PUBLIC_SITE_URL` | The deployed site, e.g. `https://pocketi.app`. Password-reset emails link here (the app's own origin, `capacitor://localhost`, can't be opened from email). |
+| `NEXT_PUBLIC_SITE_URL` | The deployed site, e.g. `https://pocketi.app`. Password-reset emails link here (the app's own origin, `capacitor://localhost`, can't be opened from email), and shared trade lists link here too. |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | The address shown on the Support and Privacy pages. Apple reviews these. |
 
 ## 3. App identity

@@ -77,8 +77,18 @@ export function parseNumber(text: string): { number: string; total: string } | n
   return { number, total: totalPrefix + totalDigits };
 }
 
+// The OCR worker reads one card at a time (each read changes its settings), so
+// cards scanned quickly in a row wait their turn.
+let queue: Promise<unknown> = Promise.resolve();
+
 /** OCR the name strip (top) and number strip (bottom) of a card photo. */
-export async function readCard(card: HTMLCanvasElement): Promise<ScanText> {
+export function readCard(card: HTMLCanvasElement): Promise<ScanText> {
+  const result = queue.then(() => readCardNow(card));
+  queue = result.catch(() => {});
+  return result;
+}
+
+async function readCardNow(card: HTMLCanvasElement): Promise<ScanText> {
   const worker = await getOcrWorker();
   await worker.setParameters({ tessedit_char_whitelist: "" });
   const top = await worker.recognize(region(card, 0.04, 0.02, 0.8, 0.1));
@@ -116,4 +126,11 @@ export async function findCandidates(scan: ScanText): Promise<PokemonCard[]> {
   }
   if (scan.name) return searchCards(scan.name).catch(() => []);
   return [];
+}
+
+/** The one card a scan clearly points to, if any: the only candidate, or the only one whose name matches a read number. */
+export function confidentMatch(scan: ScanText, candidates: PokemonCard[]): PokemonCard | null {
+  if (candidates.length === 1) return candidates[0];
+  const named = scan.name ? candidates.filter((c) => nameMatches(c.name, scan.name!)) : [];
+  return scan.number && named.length === 1 ? named[0] : null;
 }
