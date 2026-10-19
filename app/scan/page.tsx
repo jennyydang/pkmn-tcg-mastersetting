@@ -183,7 +183,7 @@ function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loadi
           setWant(wantKey, !wanted); tapFeedback();
         }}
           className="flex items-center justify-center gap-2 min-h-[48px] rounded-xl border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-sm font-semibold">
-          <StarIcon className="w-4 h-4" filled={isWanted(wantKey)} /> {isWanted(wantKey) ? "On want list" : "Want"}
+          <StarIcon className="w-4 h-4" filled={isWanted(wantKey)} /> {isWanted(wantKey) ? "On wishlist" : "Wishlist"}
         </button>
       </div>
 

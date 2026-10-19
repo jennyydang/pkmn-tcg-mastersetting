@@ -81,11 +81,11 @@ export default function WantsPage() {
       <nav className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
         <Link href="/" className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors">Home</Link>
         <ChevronRightIcon className="w-4 h-4" />
-        <span className="text-gray-900 dark:text-gray-100 font-medium">Want List</span>
+        <span className="text-gray-900 dark:text-gray-100 font-medium">Wishlist</span>
       </nav>
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Want List</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Wishlist</h1>
         {keys.length > 0 ? (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {keys.length} {keys.length === 1 ? "card" : "cards"} · about {fmt(total)} to buy them all
@@ -94,8 +94,8 @@ export default function WantsPage() {
         ) : (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {available
-              ? "Tap a card’s “i” button anywhere in the app and choose “Add to want list”. Set a target price and cards that drop to it are flagged here."
-              : "The want list isn’t set up yet (run supabase/wants_and_copies.sql in Supabase)."}
+              ? "Open any card you don’t own yet and choose “Add to wishlist”. Set a target price and cards that drop to it are flagged here."
+              : "The wishlist isn’t set up yet (run supabase/wants_and_copies.sql in Supabase)."}
           </p>
         )}
       </div>
@@ -125,7 +125,7 @@ export default function WantsPage() {
               </div>
               <span className="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100 shrink-0">{price != null ? fmt(price) : "No price"}</span>
             </button>
-            <button onClick={async () => { if (await confirm(wantRemovalPrompt(card!.name, target))) setWant(key, false); }} aria-label={`Remove ${card!.name} from want list`}
+            <button onClick={async () => { if (await confirm(wantRemovalPrompt(card!.name, target))) setWant(key, false); }} aria-label={`Remove ${card!.name} from wishlist`}
               className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30"><StarIcon className="w-5 h-5" filled /></button>
           </li>
         ))}

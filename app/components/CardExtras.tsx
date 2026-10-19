@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { CheckIcon, StarIcon } from "./Icons";
-import { CONDITIONS, Condition, CopyDetails, GRADE_COMPANIES, GradeCompany, useCardData } from "@/lib/cardData";
+import { CONDITIONS, Condition, CopyDetails, DEFAULT_DETAILS, GRADE_COMPANIES, GradeCompany, useCardData } from "@/lib/cardData";
 import { useConfirm, wantRemovalPrompt } from "@/lib/confirm";
+import { useStore } from "@/lib/store";
+import { useAddToCollection } from "@/lib/addCopies";
+import { VARIANT_LABELS, cardVariants, ownedKey, parseOwnedKey, variantPrice } from "@/lib/variants";
+import { CardVariant, PokemonCard } from "@/lib/types";
 
 const inputClass =
   "w-full px-3 py-2 min-h-[40px] rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -49,7 +53,7 @@ export function WantControls({ cardKey, cardName, marketPrice }: { cardKey: stri
     status = marketPrice == null
       ? `We’ll flag ${cardName} when it’s ${fmtPrice(target)} or less.`
       : marketPrice <= target
-        ? `It’s ${fmtPrice(marketPrice)} now, already at your target. It’s flagged on your want list.`
+        ? `It’s ${fmtPrice(marketPrice)} now, already at your target. It’s flagged on your wishlist.`
         : `We’ll flag ${cardName} when it’s ${fmtPrice(target)} or less. It’s ${fmtPrice(marketPrice)} now.`;
   }
 
@@ -64,7 +68,7 @@ export function WantControls({ cardKey, cardName, marketPrice }: { cardKey: stri
         className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200 min-h-[40px]"
       >
         <StarIcon className="w-5 h-5" filled={wanted} />
-        {wanted ? "On your want list" : "Add to want list"}
+        {wanted ? "On your wishlist" : "Add to wishlist"}
       </button>
 
       {wanted && (
@@ -100,7 +104,7 @@ export function WantControls({ cardKey, cardName, marketPrice }: { cardKey: stri
           ) : justSaved ? (
             <p className="flex items-start gap-1.5 text-sm font-medium text-green-700 dark:text-green-400" role="status">
               <CheckIcon className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>{target != null ? `Target set. ${status}` : "Target removed. It’s still on your want list."}</span>
+              <span>{target != null ? `Target set. ${status}` : "Target removed. It’s still on your wishlist."}</span>
             </p>
           ) : status ? (
             <p className="text-xs text-gray-600 dark:text-gray-400">{status}</p>
@@ -111,8 +115,90 @@ export function WantControls({ cardKey, cardName, marketPrice }: { cardKey: stri
   );
 }
 
+/**
+ * The versions of a card you own (normal, reverse holo, …), each with its own
+ * copies form. Add a version you also have, or remove one you don't, e.g. to
+ * correct the version a card was added as. A version counts as owned when it
+ * has saved copy details or is checked off in a master set; a card that's only
+ * in My Collection counts as its base version.
+ */
+export function OwnedVersions({ card, initialKey }: { card: PokemonCard; initialKey?: string }) {
+  const { trackedItems, toggleCard } = useStore();
+  const { details, available, saveDetails, removeDetails } = useCardData();
+  const addToCollection = useAddToCollection();
+  const confirm = useConfirm();
+  const versions = cardVariants(card);
+
+  const recorded = (v: CardVariant) => {
+    const key = ownedKey(card, v);
+    return details.has(key) || trackedItems.some((t) => t.ownedCards.includes(key));
+  };
+  const ownedVersions = versions.filter(recorded);
+  const implied = ownedVersions.length === 0; // only in My Collection: its base version
+  const owned = implied ? [versions[0]] : ownedVersions;
+
+  const initial = initialKey ? parseOwnedKey(initialKey).variant ?? versions[0] : owned[0];
+  const [selected, setSelected] = useState<CardVariant>(owned.includes(initial) ? initial : owned[0]);
+  const current = owned.includes(selected) ? selected : owned[0];
+
+  async function addVersion(v: CardVariant) {
+    // Keep the version it was counted as until now, so adding never silently replaces it.
+    if (implied && available) await saveDetails(ownedKey(card, versions[0]), DEFAULT_DETAILS);
+    addToCollection(card, v);
+    if (available) await saveDetails(ownedKey(card, v), DEFAULT_DETAILS);
+    setSelected(v);
+  }
+
+  async function removeVersion(v: CardVariant) {
+    const key = ownedKey(card, v);
+    const sets = trackedItems.filter((t) => t.ownedCards.includes(key));
+    const ok = await confirm({
+      title: `Remove the ${VARIANT_LABELS[v].long} version?`,
+      message: `Its copy details are deleted${sets.length ? ` and it’s unchecked in ${sets.map((t) => t.label).join(", ")}` : ""}. ${card.name} stays in your collection.`,
+    });
+    if (!ok) return;
+    for (const t of sets) toggleCard(t.id, key);
+    removeDetails(key);
+    setSelected(owned.find((o) => o !== v) ?? versions[0]);
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-2">Versions</p>
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Version">
+          {versions.map((v) => {
+            const isOwned = owned.includes(v);
+            const qty = details.get(ownedKey(card, v))?.quantity ?? 1;
+            return isOwned ? (
+              <button key={v} role="radio" aria-checked={current === v} onClick={() => setSelected(v)}
+                className={`px-3 min-h-[40px] rounded-full text-sm font-semibold transition-colors ${current === v ? "bg-blue-600 text-white" : "bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100"}`}>
+                {VARIANT_LABELS[v].long} <span className="opacity-80 font-normal">×{qty}</span>
+              </button>
+            ) : (
+              <button key={v} onClick={() => addVersion(v)} aria-label={`Add ${VARIANT_LABELS[v].long} version`}
+                className="px-3 min-h-[40px] rounded-full text-sm font-medium border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600">
+                + {VARIANT_LABELS[v].long}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Tap a version to edit its copies. Tap + to add a version you also have.</p>
+      </div>
+
+      <CopyDetailsForm
+        key={current}
+        cardKey={ownedKey(card, current)}
+        marketPrice={variantPrice(card, current)}
+        title={`My copies · ${VARIANT_LABELS[current].long}`}
+        onRemove={owned.length > 1 ? () => removeVersion(current) : undefined}
+      />
+    </div>
+  );
+}
+
 /** Quantity, condition, grade and price paid for a card you own. */
-export function CopyDetailsForm({ cardKey, marketPrice }: { cardKey: string; marketPrice?: number }) {
+export function CopyDetailsForm({ cardKey, marketPrice, title = "My copies", onRemove }: { cardKey: string; marketPrice?: number; title?: string; onRemove?: () => void }) {
   const { detailsFor, saveDetails } = useCardData();
   const saved = detailsFor(cardKey);
   const [d, setD]           = useState<CopyDetails>(saved);
@@ -136,7 +222,7 @@ export function CopyDetailsForm({ cardKey, marketPrice }: { cardKey: string; mar
 
   return (
     <div className="rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3 space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">My copies</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">{title}</p>
 
       <div className="flex items-center gap-3">
         <span className="text-sm text-gray-700 dark:text-gray-300 w-20">Quantity</span>
@@ -194,6 +280,11 @@ export function CopyDetailsForm({ cardKey, marketPrice }: { cardKey: string; mar
           {saving ? "Saving…" : "Save"}
         </button>
         {message && <span className="text-sm text-green-600 dark:text-green-400">{message}</span>}
+        {onRemove && (
+          <button onClick={onRemove} className="ml-auto text-sm font-medium text-red-600 dark:text-red-400 hover:underline min-h-[40px]">
+            Remove this version
+          </button>
+        )}
       </div>
     </div>
   );

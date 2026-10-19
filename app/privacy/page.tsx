@@ -23,7 +23,7 @@ export default function PrivacyPage() {
         <li><strong>Account information:</strong> your email address and password. Passwords are stored securely
           (hashed) by our authentication provider; we never see them.</li>
         <li><strong>Collection data:</strong> the master sets you track, the cards you mark as owned, your custom
-          sets and My Collection cards, your want list and target prices, details you add about your copies
+          sets and My Collection cards, your wishlist and target prices, details you add about your copies
           (quantity, condition, grade and price paid), and daily snapshots of your collection’s estimated value.</li>
       </ul>
       <p>

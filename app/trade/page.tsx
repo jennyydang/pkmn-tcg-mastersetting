@@ -71,7 +71,7 @@ function TradeList() {
           </p>
           {wantedCount > 0 && (
             <p className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-amber-600 dark:text-amber-400">
-              <StarIcon className="w-4 h-4" filled /> {wantedCount} {wantedCount === 1 ? "is" : "are"} on your want list
+              <StarIcon className="w-4 h-4" filled /> {wantedCount} {wantedCount === 1 ? "is" : "are"} on your wishlist
             </p>
           )}
         </div>
@@ -93,7 +93,7 @@ function TradeList() {
                   <span className="absolute top-1.5 right-1.5 px-1.5 min-w-[24px] h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shadow">×{row.count}</span>
                 )}
                 {wanted(row.key) && (
-                  <span className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center shadow" title="On your want list">
+                  <span className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center shadow" title="On your wishlist">
                     <StarIcon className="w-3.5 h-3.5" filled />
                   </span>
                 )}

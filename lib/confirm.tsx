@@ -84,10 +84,10 @@ function ConfirmDialog({ options, onAnswer }: { options: ConfirmOptions; onAnswe
 
 const fmtPrice = (n: number) => n.toLocaleString(undefined, { style: "currency", currency: "USD" });
 
-/** Shared wording for taking a card off the want list (its target price goes too). */
+/** Shared wording for taking a card off the wishlist (its target price goes too). */
 export function wantRemovalPrompt(cardName: string, target: number | null | undefined): ConfirmOptions {
   return {
-    title: `Remove ${cardName} from your want list?`,
+    title: `Remove ${cardName} from your wishlist?`,
     message: target != null ? `Your ${fmtPrice(target)} target price will be removed too.` : undefined,
     confirmLabel: "Remove",
   };

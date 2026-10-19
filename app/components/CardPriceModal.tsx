@@ -3,8 +3,8 @@
 import { PokemonCard } from "@/lib/types";
 import CardImage from "./CardImage";
 import { useEffect, useState } from "react";
-import { CopyDetailsForm, WantControls } from "./CardExtras";
-import { parseOwnedKey, variantPrice } from "@/lib/variants";
+import { CopyDetailsForm, OwnedVersions, WantControls } from "./CardExtras";
+import { cardVariants, parseOwnedKey, variantPrice } from "@/lib/variants";
 
 interface Props {
   card: PokemonCard | null;
@@ -138,15 +138,18 @@ export default function CardPriceModal({ card, loading, onClose, cardKey, owned 
             )}
           </div>
 
-          {/* Want list and owned-copy details */}
+          {/* Cards you own: your copies (per version); others: the wishlist */}
           {card && !loading && (
             <div className="space-y-3 pb-4">
-              <WantControls
-                cardKey={cardKey ?? card.id}
-                cardName={card.name}
-                marketPrice={variantPrice(card, parseOwnedKey(cardKey ?? card.id).variant)}
-              />
-              {owned && (
+              {!owned ? (
+                <WantControls
+                  cardKey={cardKey ?? card.id}
+                  cardName={card.name}
+                  marketPrice={variantPrice(card, parseOwnedKey(cardKey ?? card.id).variant)}
+                />
+              ) : cardVariants(card).length > 1 ? (
+                <OwnedVersions card={card} initialKey={cardKey} />
+              ) : (
                 <CopyDetailsForm
                   cardKey={cardKey ?? card.id}
                   marketPrice={variantPrice(card, parseOwnedKey(cardKey ?? card.id).variant)}

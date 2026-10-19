@@ -13,7 +13,7 @@ import { CameraIcon, CardsIcon, HomeIcon, StarIcon, UserIcon } from "./Icons";
 const TABS = [
   { href: "/",           label: "Home",       Icon: HomeIcon,  match: ["/", "/sets", "/pokemon", "/artist", "/custom"] },
   { href: "/collection", label: "Collection", Icon: CardsIcon, match: ["/collection", "/portfolio"] },
-  { href: "/wants",      label: "Wants",      Icon: StarIcon,  match: ["/wants"] },
+  { href: "/wants",      label: "Wishlist",   Icon: StarIcon,  match: ["/wants"] },
   { href: "/account",    label: "Account",    Icon: UserIcon,  match: ["/account", "/admin", "/feedback", "/privacy", "/support"] },
 ] as const;
 

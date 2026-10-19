@@ -42,6 +42,8 @@ interface CardDataValue {
   details: Map<string, CopyDetails>;
   detailsFor: (key: string) => CopyDetails;
   saveDetails: (key: string, details: CopyDetails) => Promise<boolean>;
+  /** Forget the saved details for a version you no longer have. */
+  removeDetails: (key: string) => void;
 }
 
 const CardDataContext = createContext<CardDataValue | null>(null);
@@ -119,7 +121,7 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
   });
 
   const notReady = useCallback(() => {
-    reportSyncError("Want list and card details aren't set up yet. Run supabase/wants_and_copies.sql in Supabase.");
+    reportSyncError("The wishlist and card details aren't set up yet. Run supabase/wants_and_copies.sql in Supabase.");
   }, [reportSyncError]);
 
   const setWant = useCallback((key: string, wanted: boolean, targetPrice: number | null = null) => {
@@ -134,7 +136,7 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
       ? { kind: "upsert", table: "want_list", onConflict: "user_id,card_id", rows: { user_id: userId, card_id: key, target_price: targetPrice } }
       : { kind: "delete", table: "want_list", match: { user_id: userId, card_id: key } }
     ).then((error) => {
-      if (error) reportSyncError(`Couldn't save your want list (${error.message}). Refresh to see what's saved.`);
+      if (error) reportSyncError(`Couldn't save your wishlist (${error.message}). Refresh to see what's saved.`);
     });
   }, [userId, available, notReady, reportSyncError]);
 
@@ -158,6 +160,18 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [userId, available, notReady, reportSyncError]);
 
+  const removeDetails = useCallback((key: string) => {
+    if (!userId || !available) return;
+    setDetails((prev) => {
+      const next = new Map(prev);
+      next.delete(key);
+      return next;
+    });
+    writeOrQueue(userId, "card_details", { kind: "delete", table: "card_details", match: { user_id: userId, card_id: key } }).then((error) => {
+      if (error) reportSyncError(`Couldn't remove card details (${error.message}). Refresh to see what's saved.`);
+    });
+  }, [userId, available, reportSyncError]);
+
   const value: CardDataValue = {
     available: !!userId && available,
     wants: userId ? wants : new Map(),
@@ -166,6 +180,7 @@ export function CardDataProvider({ children }: { children: React.ReactNode }) {
     details: userId ? details : new Map(),
     detailsFor: (key) => (userId && details.get(key)) || DEFAULT_DETAILS,
     saveDetails,
+    removeDetails,
   };
 
   return <CardDataContext.Provider value={value}>{children}</CardDataContext.Provider>;
