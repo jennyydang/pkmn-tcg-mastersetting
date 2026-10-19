@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { ThemePreference, useTheme } from "@/lib/theme";
 import { ChevronRightIcon } from "@/app/components/Icons";
 
 const inputClass =
@@ -13,6 +14,7 @@ const cardClass = "bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 
 export default function AccountPage() {
   const router = useRouter();
   const { user, loading: authLoading, isAdmin, signOut, updatePassword, deleteAccount } = useAuth();
+  const { preference, setPreference } = useTheme();
 
   const [password, setPassword]       = useState("");
   const [confirm, setConfirm]         = useState("");
@@ -87,6 +89,35 @@ export default function AccountPage() {
           <ChevronRightIcon className="w-5 h-5 text-gray-400" />
         </Link>
       )}
+
+      <section className={cardClass}>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">Appearance</h2>
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Appearance">
+          {([
+            { value: "light",  label: "Light",  icon: "☀️" },
+            { value: "dark",   label: "Dark",   icon: "🌙" },
+            { value: "system", label: "System", icon: "📱" },
+          ] as { value: ThemePreference; label: string; icon: string }[]).map((o) => (
+            <button
+              key={o.value}
+              role="radio"
+              aria-checked={preference === o.value}
+              onClick={() => setPreference(o.value)}
+              className={`flex flex-col items-center gap-1 py-3 min-h-[44px] rounded-xl border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                preference === o.value
+                  ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                  : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              }`}
+            >
+              <span className="text-lg" aria-hidden="true">{o.icon}</span>
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {preference === "system" && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Matches your device’s light or dark setting.</p>
+        )}
+      </section>
 
       <section className={cardClass}>
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">Change password</h2>
