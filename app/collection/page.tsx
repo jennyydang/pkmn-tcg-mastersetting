@@ -13,7 +13,7 @@ import CardPriceModal from "@/app/components/CardPriceModal";
 import CollectionMasterSets from "@/app/components/CollectionMasterSets";
 import { ownedCardIds } from "@/lib/variants";
 import { staggerStyle } from "@/lib/motion";
-import { CameraIcon, CardsIcon, ChevronRightIcon, SearchIcon, SwapIcon, TrendingUpIcon } from "@/app/components/Icons";
+import { CardsIcon, ChevronRightIcon, SearchIcon, SwapIcon, TrendingUpIcon } from "@/app/components/Icons";
 import { useCardData } from "@/lib/cardData";
 import { extrasFromDetails } from "@/lib/trade";
 import { setFitsCard, setsHoldingCard } from "@/lib/setMembership";
@@ -87,17 +87,27 @@ export default function CollectionPage() {
       return;
     }
     setSearching(true);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const results = await searchCards(q);
-        setSearchResults(results);
-        setSearchOpen(true);
-      } catch {
-        setSearchResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 350);
+    debounceRef.current = setTimeout(() => runSearch(q), 350);
+  }
+
+  async function runSearch(q: string) {
+    setSearching(true);
+    try {
+      const results = await searchCards(q);
+      setSearchResults(results);
+      setSearchOpen(true);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  // Search button / keyboard Search key: search now instead of waiting for typing to pause.
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (query.trim()) runSearch(query);
   }
 
   function handleAddFromSearch(card: PokemonCard) {
@@ -199,15 +209,16 @@ export default function CollectionPage() {
       </Link>
       </div>
 
-      {/* Add row: search + scan */}
-      <div className="flex gap-2 mb-6">
+      {/* Add row: search (the scanner is the camera button in the tab bar) */}
+      <form onSubmit={handleSearchSubmit} role="search" className="flex gap-2 mb-6">
         {/* Search input with dropdown */}
         <div className="relative flex-1">
           <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 transition-all">
             <SearchIcon className="w-5 h-5 text-gray-400 shrink-0" aria-hidden="true" />
             <input
               id="collection-search"
-              type="text"
+              type="search"
+              enterKeyHint="search"
               value={query}
               onChange={handleSearchChange}
               onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
@@ -216,7 +227,7 @@ export default function CollectionPage() {
               aria-label="Search cards to add to collection"
               aria-controls="collection-search-results"
               aria-expanded={searchOpen && searchResults.length > 0}
-              className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+              className="flex-1 min-w-0 appearance-none bg-transparent outline-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
             />
             {searching && (
               <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" aria-label="Searching" />
@@ -262,16 +273,16 @@ export default function CollectionPage() {
           )}
         </div>
 
-        {/* Opens the camera card scanner (also the middle button of the phone tab bar). */}
-        <Link
-          href="/scan"
-          aria-label="Scan a card"
+        <button
+          type="submit"
+          // Keep focus in the box so the results dropdown stays open.
+          onMouseDown={(e) => e.preventDefault()}
           className="shrink-0 flex items-center gap-2 px-4 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         >
-          <CameraIcon className="w-4 h-4" />
-          Scan
-        </Link>
-      </div>
+          <SearchIcon className="w-4 h-4" />
+          Search
+        </button>
+      </form>
 
       {setsWithCards.length > 0 && (
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">Added cards</h2>
