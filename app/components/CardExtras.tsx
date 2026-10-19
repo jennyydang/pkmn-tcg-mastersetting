@@ -7,6 +7,7 @@ import { CONDITIONS, Condition, CopyDetails, DEFAULT_DETAILS, GRADE_COMPANIES, G
 import { useConfirm, wantRemovalPrompt } from "@/lib/confirm";
 import { useStore } from "@/lib/store";
 import { useAddToCollection } from "@/lib/addCopies";
+import { conditionPrice } from "@/lib/conditions";
 import { VARIANT_LABELS, cardVariants, ownedKey, parseOwnedKey, variantPrice } from "@/lib/variants";
 import { CardVariant, PokemonCard } from "@/lib/types";
 
@@ -217,7 +218,9 @@ export function CopyDetailsForm({ cardKey, marketPrice, title = "My copies", onR
   }
 
   const update = (patch: Partial<CopyDetails>) => { setD((prev) => ({ ...prev, ...patch })); setMessage(null); };
-  const value = marketPrice != null ? marketPrice * draft.quantity : null;
+  // Priced for the condition chosen (graded copies at the ungraded market price).
+  const unit = marketPrice != null && draft.condition && !draft.gradeCompany ? conditionPrice(marketPrice, draft.condition) : marketPrice;
+  const value = unit != null ? unit * draft.quantity : null;
   const gain = value != null && draft.purchasePrice != null ? value - draft.purchasePrice * draft.quantity : null;
 
   return (

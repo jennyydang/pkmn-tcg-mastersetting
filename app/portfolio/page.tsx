@@ -7,6 +7,8 @@ import { useCardData } from "@/lib/cardData";
 import { useAuth } from "@/lib/auth";
 import { getCardsByIds } from "@/lib/api";
 import { VARIANT_LABELS, ownedCardIds, parseOwnedKey, variantPrice } from "@/lib/variants";
+import { CopyDetails } from "@/lib/cardData";
+import { conditionPrice } from "@/lib/conditions";
 import { supabase } from "@/lib/supabase";
 import { ChevronRightIcon } from "@/app/components/Icons";
 import {
@@ -29,10 +31,20 @@ interface CardRow {
   name: string;
   number: string;
   setTotal: number;
-  /** Value of all copies (market price × quantity). */
+  /** Value of all copies (price for their condition × quantity). */
   price: number | null;
   quantity: number;
   grade: string | null;
+  condition: string | null;
+}
+
+/**
+ * One copy's value: the market price adjusted for the condition you set
+ * (lib/conditions.ts). Graded copies, and copies without a condition, use the
+ * market price.
+ */
+function copyValue(market: number, d: CopyDetails | undefined) {
+  return d?.condition && !d.gradeCompany ? conditionPrice(market, d.condition) : market;
 }
 
 interface BreakdownRow {
@@ -46,11 +58,13 @@ interface BreakdownRow {
 export default function PortfolioPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { trackedItems } = useStore();
+  const { trackedItems, collectionCardIds } = useStore();
   const { details } = useCardData();
 
   const [loading, setLoading] = useState(true);
   const [totalValue, setTotalValue] = useState(0);
+  // The same cards at the Near Mint market price, to compare with your conditions.
+  const [marketValue, setMarketValue] = useState(0);
   const [cardCount, setCardCount] = useState(0);
   // Cards with a price paid recorded: what they cost and what they're worth now.
   const [costBasis, setCostBasis] = useState<{ paid: number; worth: number; copies: number } | null>(null);
@@ -73,17 +87,23 @@ export default function PortfolioPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    if (trackedItems.length === 0) { setLoading(false); return; }
+    if (trackedItems.length === 0 && collectionCardIds.length === 0 && details.size === 0) { setLoading(false); return; }
 
     async function compute() {
       setLoading(true);
       try {
         // Owned entries can be a specific version ("<card id>|reverse"); each is
         // priced as that version.
+        // Everything you own: versions checked off in master sets, versions with
+        // copy details, and My Collection cards with no version recorded (as
+        // their base version), so this matches the Collection page.
         const allKeys = new Set<string>();
         for (const item of trackedItems) {
           for (const key of item.ownedCards) allKeys.add(key);
         }
+        for (const key of details.keys()) allKeys.add(key);
+        const recorded = ownedCardIds([...allKeys]);
+        for (const id of collectionCardIds) if (!recorded.has(id)) allKeys.add(id);
 
         const cards = await getCardsByIds([...ownedCardIds([...allKeys])]);
         const cardById = new Map(cards.map((c) => [c.id, c]));
@@ -103,38 +123,45 @@ export default function PortfolioPage() {
         // Each owned version counts once overall (even if it's in several master
         // sets), times the number of copies recorded for it.
         const qty = (key: string) => details.get(key)?.quantity ?? 1;
-        let total = 0, count = 0, paid = 0, worth = 0, paidCopies = 0;
+        const yours = (key: string) => { const m = priceMap.get(key); return m == null ? undefined : copyValue(m, details.get(key)); };
+        let total = 0, market = 0, count = 0, paid = 0, worth = 0, paidCopies = 0;
         for (const [key, price] of priceMap) {
-          total += price * qty(key);
+          total += yours(key)! * qty(key);
+          market += price * qty(key);
           count += qty(key);
         }
         for (const key of allKeys) {
           const d = details.get(key);
           if (d?.purchasePrice == null) continue;
           paid += d.purchasePrice * d.quantity;
-          worth += (priceMap.get(key) ?? 0) * d.quantity;
+          worth += (yours(key) ?? 0) * d.quantity;
           paidCopies += d.quantity;
         }
         setTotalValue(total);
+        setMarketValue(market);
         setCardCount(count);
         setCostBasis(paidCopies > 0 ? { paid, worth, copies: paidCopies } : null);
 
-        const rows: BreakdownRow[] = trackedItems
-          .map((item) => {
-            let itemValue = 0;
-            const itemCards: CardRow[] = item.ownedCards.map((cardId) => {
-              const d = details.get(cardId);
-              const quantity = d?.quantity ?? 1;
-              const unit = priceMap.get(cardId);
-              const price = unit != null ? unit * quantity : null;
-              itemValue += price ?? 0;
-              const info = cardInfoMap.get(cardId);
-              const grade = d?.gradeCompany ? `${d.gradeCompany} ${d.grade ?? ""}`.trim() : null;
-              return { id: cardId, name: info?.name ?? cardId, number: info?.number ?? "", setTotal: info?.setTotal ?? 0, price, quantity, grade };
-            });
-            itemCards.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
-            return { id: item.id, label: item.label, ownedCount: item.ownedCards.length, value: itemValue, cards: itemCards };
-          })
+        const row = (id: string, label: string, keys: string[]): BreakdownRow => {
+          let itemValue = 0;
+          const itemCards: CardRow[] = keys.map((cardId) => {
+            const d = details.get(cardId);
+            const quantity = d?.quantity ?? 1;
+            const unit = yours(cardId);
+            const price = unit != null ? unit * quantity : null;
+            itemValue += price ?? 0;
+            const info = cardInfoMap.get(cardId);
+            const grade = d?.gradeCompany ? `${d.gradeCompany} ${d.grade ?? ""}`.trim() : null;
+            return { id: cardId, name: info?.name ?? cardId, number: info?.number ?? "", setTotal: info?.setTotal ?? 0, price, quantity, grade, condition: grade ? null : d?.condition ?? null };
+          });
+          itemCards.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
+          return { id, label, ownedCount: keys.length, value: itemValue, cards: itemCards };
+        };
+        const inSets = new Set(trackedItems.flatMap((t) => t.ownedCards));
+        const rows: BreakdownRow[] = [
+          ...trackedItems.map((item) => row(item.id, item.label, item.ownedCards)),
+          row("__collection", "Other cards in My Collection", [...allKeys].filter((k) => !inSets.has(k))),
+        ]
           .filter((r) => r.ownedCount > 0)
           .sort((a, b) => b.value - a.value);
         setBreakdown(rows);
@@ -162,7 +189,7 @@ export default function PortfolioPage() {
       }
     }
     compute();
-  }, [user, authLoading, trackedItems, details]);
+  }, [user, authLoading, trackedItems, collectionCardIds, details]);
 
   if (authLoading || !user) {
     return (
@@ -185,7 +212,15 @@ export default function PortfolioPage() {
           {loading ? (
             <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1" />
           ) : (
-            <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">${totalValue.toFixed(2)}</p>
+            <>
+              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">${totalValue.toFixed(2)}</p>
+              {Math.abs(marketValue - totalValue) >= 0.01 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  For your cards’ conditions. Near Mint value ${marketValue.toFixed(2)}
+                  <span className="text-red-500 dark:text-red-400"> (−${(marketValue - totalValue).toFixed(2)})</span>
+                </p>
+              )}
+            </>
           )}
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
@@ -208,7 +243,7 @@ export default function PortfolioPage() {
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Paid ${costBasis.paid.toFixed(2)}, now worth ${costBasis.worth.toFixed(2)}, for the {costBasis.copies} {costBasis.copies === 1 ? "copy" : "copies"} with a price paid recorded.
-              Graded cards are valued at the ungraded price.
+              Values use the condition you set; graded cards are valued at the ungraded price.
             </p>
           </div>
         )}
@@ -272,7 +307,7 @@ export default function PortfolioPage() {
                       />
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{row.label}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">{row.ownedCount} cards owned</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{row.ownedCount} {row.ownedCount === 1 ? "card" : "cards"} owned</p>
                       </div>
                     </div>
                     <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 shrink-0 ml-3">
@@ -294,6 +329,7 @@ export default function PortfolioPage() {
                             {card.quantity > 1 && <span className="font-semibold">{card.quantity}× </span>}
                             {card.name}
                             {card.grade && <span className="ml-1 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[11px] font-semibold">{card.grade}</span>}
+                            {card.condition && card.condition !== "NM" && <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[11px] font-semibold">{card.condition}</span>}
                             {card.number && (
                               <span className="text-gray-500 dark:text-gray-400 ml-1 font-mono">
                                 #{card.number}{card.setTotal > 0 ? `/${card.setTotal}` : ""}
