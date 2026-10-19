@@ -165,10 +165,14 @@ function sameArtist(read: string, actual: string | undefined) {
 /**
  * Black Star Promo numbers, which have no "/total": "SVP EN 027" → svp-027,
  * "MEP EN 001" → mep-001, "SWSH001" → swshp-SWSH001, "SM01" → smp-SM01.
+ * Japanese promos print the promo set where the total would be: "020/M-P" →
+ * ja:M-P-020, "001/SV-P" → ja:SV-P-001.
  */
 export function parsePromo(text: string): string[] {
   const t = text.toUpperCase().replace(/\s+/g, "");
   const ids: string[] = [];
+  const japanese = /(\d{1,3})\/(SV|M|S|SM|XY|BW)-?P(?![A-Z])/.exec(t);
+  if (japanese) ids.push(`ja:${japanese[2]}-P-${japanese[1].padStart(3, "0")}`);
   // OCR puts stray marks between code and number ("SVP: ~ 027"), so allow a few.
   const modern = /(SVP|MEP)[^0-9]{0,6}?(\d{1,3})(?!\d)/.exec(t);
   if (modern) ids.push(`${modern[1].toLowerCase()}-${modern[2].padStart(3, "0")}`);
