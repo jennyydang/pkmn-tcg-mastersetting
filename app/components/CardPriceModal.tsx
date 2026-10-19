@@ -78,7 +78,9 @@ export default function CardPriceModal({ card, loading, onClose, cardKey, owned 
             <div className="flex-1 min-w-0">
               {card ? (
                 <>
-                  <h2 className="font-bold text-gray-900 dark:text-gray-100 leading-tight">{card.name}</h2>
+                  <h2 className="font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                    {card.name}{card.localName && <span className="font-normal text-gray-500 dark:text-gray-400"> · {card.localName}</span>}
+                  </h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5 truncate">
                     {card.set.name} #{card.number}{card.rarity ? ` · ${card.rarity}` : ""}
                   </p>
@@ -112,8 +114,11 @@ export default function CardPriceModal({ card, loading, onClose, cardKey, owned 
             ) : (
               <>
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-3">
-                  TCGPlayer Market Prices
+                  {card?.priceSource === "cardmarket" ? "Cardmarket prices, in US dollars" : "TCGPlayer Market Prices"}
                 </p>
+                {card?.priceSource === "cardmarket" && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2 mb-3">Japanese card prices from Cardmarket (Europe), converted from euros at today’s rate. An estimate.</p>
+                )}
                 <div className="space-y-3">
                   {Object.entries(prices!).map(([type, p]) => (
                     <div key={type} className="rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3">

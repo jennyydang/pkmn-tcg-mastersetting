@@ -239,7 +239,7 @@ function WhatsLeft({ entries, includeVariants, showSetNames }: { entries: Missin
 
               {!loading && pricedAny && (
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  TCGplayer market prices{unknown > 0 && `; ${unknown} without a price aren't in the total`}
+                  {rows.some(({ card }) => card.set.language === "ja") ? "Cardmarket prices converted to dollars" : "TCGplayer market prices"}{unknown > 0 && `; ${unknown} without a price aren't in the total`}
                   {!includeVariants && ". Each card is priced at its cheapest version"}.
                 </p>
               )}

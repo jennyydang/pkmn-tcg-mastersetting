@@ -15,7 +15,7 @@ const FAQ = [
   },
   {
     q: "Where do card prices come from?",
-    a: "Prices are TCGplayer market prices, provided through TCGdex. They're estimates and can lag behind the market.",
+    a: "Prices are TCGplayer market prices, provided through TCGdex. Japanese cards use Cardmarket prices, converted from euros to dollars at the day's exchange rate. They're estimates and can lag behind the market.",
   },
   {
     q: "I forgot my password.",

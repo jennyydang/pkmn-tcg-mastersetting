@@ -129,7 +129,7 @@ export default function WantsPage() {
         ))}
       </ul>
 
-      {rows.length > 0 && <p className="text-xs text-gray-400">TCGplayer market prices, updated daily. Prices are checked when you open this page.</p>}
+      {rows.length > 0 && <p className="text-xs text-gray-400">TCGplayer market prices (Cardmarket, converted to dollars, for Japanese cards), updated daily. Prices are checked when you open this page.</p>}
 
       {open && (
         <CardPriceModal card={open.card!} loading={false} cardKey={open.key} onClose={() => setOpenKey(null)} />

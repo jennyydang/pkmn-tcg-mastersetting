@@ -1,14 +1,12 @@
 import { CardVariant, PokemonCard, PokemonSet, TCGPlayerPrice } from "./types";
 import { legacyImageUrl } from "./legacyIds";
 import { VARIANT_ORDER } from "./variants";
-import { networkFirst } from "./offlineCache";
-import { isOnline } from "./online";
+import { ApiError, gql, restFetch } from "./tcgdex";
+import { JA_PREFIX, findJaSetCode, getJaCard, getJaCardsForSet, getJaSet, isJapaneseId, searchJaByName, searchJaByNumber, searchJaSets } from "./japanese";
 
 // Card data comes from TCGdex (https://tcgdex.dev). GraphQL is used for searches and
 // card lists (one request returns each card's set); REST is used for single cards
-// because only the REST card includes prices.
-const REST_URL    = "https://api.tcgdex.net/v2/en";
-const GRAPHQL_URL = "https://api.tcgdex.net/v2/graphql";
+// because only the REST card includes prices. Japanese cards live in lib/japanese.ts.
 
 // Shown for the few TCGdex cards that have no scan.
 export const PLACEHOLDER_IMAGE = "/card-placeholder.svg";
@@ -16,56 +14,7 @@ export const PLACEHOLDER_IMAGE = "/card-placeholder.svg";
 // TCGdex also lists Pokémon TCG Pocket (digital-only) sets under this series.
 const POCKET_SERIE_ID = "tcgp";
 
-const MAX_ATTEMPTS = 4;
-
-// Retries 429/5xx responses and dropped connections with backoff (1s, 2s, 4s).
-// Other errors (e.g. a 404 for an unknown card) fail at once.
-async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
-  for (let attempt = 1; ; attempt++) {
-    // Offline: fail at once so callers fall back to saved data without waiting out retries.
-    if (!isOnline()) throw new Error("Offline");
-    let res: Response;
-    try {
-      res = await fetch(url, init);
-    } catch (e) {
-      if (attempt >= MAX_ATTEMPTS || !isOnline()) throw e;
-      await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
-      continue;
-    }
-    if (res.ok) return res;
-    const retryable = res.status === 429 || res.status >= 500;
-    if (!retryable || attempt >= MAX_ATTEMPTS) throw new ApiError(res.status);
-    await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
-  }
-}
-
-export class ApiError extends Error {
-  constructor(public status: number, detail?: string) {
-    super(`API error: ${detail ?? status}`);
-  }
-}
-
-// A saved copy stands in for connection and server problems, not for answers
-// like 404 that the API gave deliberately.
-const isConnectionProblem = (e: unknown) => !(e instanceof ApiError && e.status < 500 && e.status !== 429);
-
-async function restFetch<T>(path: string): Promise<T> {
-  return networkFirst(`rest:${path}`, async () => (await fetchWithRetry(`${REST_URL}${path}`)).json(), isConnectionProblem);
-}
-
-async function gql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
-  const body = JSON.stringify({ query, variables });
-  return networkFirst(`gql:${body}`, async () => {
-    const res = await fetchWithRetry(GRAPHQL_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
-    const json = await res.json();
-    if (json.errors?.length) throw new ApiError(400, json.errors[0].message);
-    return json.data as T;
-  }, isConnectionProblem);
-}
+export { ApiError };
 
 // ── Raw TCGdex shapes ───────────────────────────────────────────────────────
 
@@ -252,7 +201,7 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
   if (!trimmed) return [];
   const lower = trimmed.toLowerCase();
 
-  const [setsRes, pokemonRes, artistRes] = await Promise.allSettled([
+  const [setsRes, pokemonRes, artistRes, jaSetsRes] = await Promise.allSettled([
     getSetCatalog().then((catalog) =>
       [...catalog.values()]
         .filter((s) => s.name.toLowerCase().includes(lower))
@@ -261,6 +210,7 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
     ),
     getCardsForPokemon(trimmed),
     getCardsForArtist(trimmed),
+    searchJaSets(trimmed),
   ]);
 
   // If every request failed, the API is down — surface that instead of "No results".
@@ -278,6 +228,20 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
         label: set.name,
         image: set.images.logo || set.images.symbol || "",
         subtitle: `${set.series} · ${set.printedTotal ?? set.total} cards`,
+        setData: set,
+      });
+    }
+  }
+
+  // Japanese sets, matched by code ("SV2a") or name.
+  if (jaSetsRes.status === "fulfilled") {
+    for (const set of jaSetsRes.value) {
+      results.push({
+        type: "set",
+        id: set.id,
+        label: set.name,
+        image: "",
+        subtitle: `Japanese set · ${set.printedTotal} cards`,
         setData: set,
       });
     }
@@ -321,10 +285,34 @@ export function normalizeNumber(num: string) {
   return num.toUpperCase().replace(/^([A-Z]*)0*(?=\d)/, "$1");
 }
 
+/** Cards matching a name, a number ("25", "025/165", "TG01") or a Japanese set code and number ("SV2a 025"). English cards first, then Japanese. */
 export async function searchCards(query: string): Promise<PokemonCard[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
+  // "SV2a 025" / "SV2a-025": a Japanese card by set code and number.
+  const coded = /^([A-Za-z0-9]+)[\s-]+([A-Za-z]{0,3}\d+)$/.exec(trimmed);
+  if (coded) {
+    const set = await findJaSetCode(coded[1]).catch(() => undefined);
+    if (set && set.id.slice(JA_PREFIX.length).toUpperCase() === coded[1].toUpperCase()) {
+      return searchJaByNumber(coded[2]).then((cards) => cards.filter((c) => c.set.id === set.id)).catch(() => []);
+    }
+  }
+
+  const [english, japanese] = await Promise.all([
+    searchEnglishCards(trimmed),
+    searchJapaneseCards(trimmed).catch((e) => { console.error("Japanese search failed", e); return []; }),
+  ]);
+  return [...english, ...japanese.slice(0, 10)];
+}
+
+function searchJapaneseCards(query: string): Promise<PokemonCard[]> {
+  const m = /^(\d+)(?:\/(\d+))?$/.exec(query);
+  if (m) return searchJaByNumber(m[1], m[2] ? parseInt(m[2], 10) : undefined);
+  return searchJaByName(query);
+}
+
+async function searchEnglishCards(trimmed: string): Promise<PokemonCard[]> {
   // Card number pattern: "25", "057", "25/102", "057/102", "TG01", "TG01/TG30", "SWSH001"
   const isNumberQuery = /^[A-Za-z]{0,5}\d+(?:\/[A-Za-z]{0,5}\d+)?$/.test(trimmed);
 
@@ -352,6 +340,7 @@ export async function searchCards(query: string): Promise<PokemonCard[]> {
 }
 
 export async function getCard(id: string): Promise<PokemonCard> {
+  if (isJapaneseId(id)) return getJaCard(id);
   const raw = await restFetch<RawCard & { set: { id: string; name: string } }>(`/cards/${encodeURIComponent(id)}`);
   const catalog = await getSetCatalog();
   const set = catalog.get(raw.set.id);
@@ -360,12 +349,14 @@ export async function getCard(id: string): Promise<PokemonCard> {
 }
 
 export async function getSet(id: string): Promise<PokemonSet> {
+  if (isJapaneseId(id)) return getJaSet(id);
   const set = (await getSetCatalog()).get(id);
   if (!set) throw new Error(`Set ${id} not found`);
   return set;
 }
 
 export async function getCardsForSet(setId: string): Promise<PokemonCard[]> {
+  if (isJapaneseId(setId)) return getJaCardsForSet(setId);
   // REST gives the set's cards in printed order; GraphQL adds each card's variants
   // (the ID filter matches substrings, hence the set check). If GraphQL fails the
   // set still loads, with every card counted as a single version.

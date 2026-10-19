@@ -9,6 +9,8 @@ export interface PokemonSet {
     symbol: string;
     logo: string;
   };
+  /** Set for Japanese sets (lib/japanese.ts); English otherwise. */
+  language?: "ja";
 }
 
 export interface TCGPlayerPrice {
@@ -34,11 +36,16 @@ export interface PokemonCard {
   set: PokemonSet;
   /** Printed versions, base first (see lib/variants.ts). Missing = unknown, treated as one. */
   variants?: CardVariant[];
+  /** Price data in TCGplayer's shape. For Japanese cards these are Cardmarket prices converted to US dollars. */
   tcgplayer?: {
     url?: string;
     updatedAt?: string;
     prices?: Record<string, TCGPlayerPrice>;
   };
+  /** Where `tcgplayer.prices` came from; missing means TCGplayer. */
+  priceSource?: "cardmarket";
+  /** The printed (Japanese) name, when `name` is an English translation. */
+  localName?: string;
 }
 
 export interface CustomCardDef {

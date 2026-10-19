@@ -65,13 +65,19 @@ function SetMasterSetView() {
             type: "set",
             id: fetchedSet.id,
             label: fetchedSet.name,
-            image: fetchedSet.images?.logo || fetchedSet.images?.symbol || "",
+            // Japanese sets have no logo on TCGdex; show their first card instead.
+            image: fetchedSet.images?.logo || fetchedSet.images?.symbol || (fetchedSet.language === "ja" ? fetchedCards[0]?.images.small ?? "" : ""),
             totalCards: fetchedCards.length,
             ownedCards: [],
             subtitle: `${fetchedSet.series} · ${fetchedSet.printedTotal ?? fetchedSet.total} cards`,
           });
         }
         if (fetchedCards.length > 0) updateTotal(id, fetchedCards.length);
+        // Japanese sets added from search have no picture yet (TCGdex has no logos for them).
+        const existing = trackedItems.find((t) => t.id === id);
+        if (fetchedSet.language === "ja" && existing && !existing.image && fetchedCards[0]?.images.small) {
+          updateItem(id, { image: fetchedCards[0].images.small });
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load set");
       } finally {

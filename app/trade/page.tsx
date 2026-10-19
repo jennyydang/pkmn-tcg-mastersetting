@@ -107,7 +107,7 @@ function TradeList() {
       </ul>
 
       {cards && (
-        <p className="text-xs text-gray-400">TCGplayer market prices, estimated for each card’s condition; graded cards show the ungraded price. Check cards in person before swapping.</p>
+        <p className="text-xs text-gray-400">TCGplayer market prices (Cardmarket, converted to dollars, for Japanese cards), estimated for each card’s condition; graded cards show the ungraded price. Check cards in person before swapping.</p>
       )}
       {!user && (
         <Link href="/" className="block text-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">

@@ -191,7 +191,7 @@ export default function ExtrasPage() {
 
       {rows.length > 0 && (
         <p className="text-xs text-gray-400">
-          You keep one copy of each; the rest are extras. Traded one away? Tap − to update your copy count. Prices are TCGplayer market prices, adjusted for condition where you’ve set it.
+          You keep one copy of each; the rest are extras. Traded one away? Tap − to update your copy count. Prices are TCGplayer market prices (Cardmarket, converted to dollars, for Japanese cards), adjusted for condition where you’ve set it.
         </p>
       )}
     </div>

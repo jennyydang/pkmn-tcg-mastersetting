@@ -4,13 +4,15 @@ import { parseOwnedKey } from "./variants";
 
 // Which tracked master sets a card can count toward: its own set, the Pokémon
 // whose master set includes it (same whole-word name match as lib/api.ts), the
-// artist who drew it, and any custom set (they hold whatever you add).
+// artist who drew it, and any custom set (they hold whatever you add). Pokémon
+// and artist master sets list English cards only, so Japanese cards count
+// toward their own set and custom sets.
 
 export function setFitsCard(t: TrackedMasterSet, card: PokemonCard): boolean {
   switch (t.type) {
     case "set":     return t.id === card.set.id;
-    case "pokemon": return matchesWord(card.name, t.id);
-    case "artist":  return matchesWord(card.illustrator, t.id);
+    case "pokemon": return card.set.language !== "ja" && matchesWord(card.name, t.id);
+    case "artist":  return card.set.language !== "ja" && matchesWord(card.illustrator, t.id);
     case "custom":  return true;
   }
 }

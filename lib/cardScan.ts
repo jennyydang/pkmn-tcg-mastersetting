@@ -2,6 +2,7 @@
 
 import type { Worker } from "tesseract.js";
 import { searchCards } from "./api";
+import { jaSetBeforeNumber, searchJaByNumber } from "./japanese";
 import { PokemonCard } from "./types";
 
 // Reads a photo of a card on the device (Tesseract OCR, bundled in public/ocr
@@ -46,6 +47,8 @@ export interface ScanText {
   number: string | null;
   total: string | null;
   raw: string;
+  /** Text of the bottom strip, where the set code is printed. */
+  bottom?: string;
 }
 
 /** Card name: the first line with real words, minus HP / stage / evolution noise. */
@@ -92,7 +95,8 @@ async function readCardNow(card: HTMLCanvasElement): Promise<ScanText> {
   const worker = await getOcrWorker();
   await worker.setParameters({ tessedit_char_whitelist: "" });
   const top = await worker.recognize(region(card, 0.04, 0.02, 0.8, 0.1));
-  await worker.setParameters({ tessedit_char_whitelist: "0123456789/ABCDEFGHIJKLMNOPQRSTUVWXYZ" });
+  // Lowercase too: Japanese set codes mix cases ("SV2a").
+  await worker.setParameters({ tessedit_char_whitelist: "0123456789/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" });
   // Number sits bottom-left on modern cards and bottom-right on older ones: read the whole strip.
   const bottom = await worker.recognize(region(card, 0.02, 0.86, 0.96, 0.12));
   const number = parseNumber(bottom.data.text);
@@ -101,6 +105,7 @@ async function readCardNow(card: HTMLCanvasElement): Promise<ScanText> {
     number: number?.number ?? null,
     total: number?.total ?? null,
     raw: `${top.data.text}\n${bottom.data.text}`.trim(),
+    bottom: bottom.data.text,
   };
 }
 
@@ -111,8 +116,25 @@ export function nameMatches(cardName: string, read: string) {
 }
 const similar = nameMatches;
 
+/**
+ * A Japanese card: modern ones print the set code beside the number ("SV2a
+ * 025/165") and no language code, where English ones print e.g. "MEW EN".
+ * The code and number pin down the card even though the Japanese name can't
+ * be read.
+ */
+async function findJapanese(scan: ScanText): Promise<PokemonCard[]> {
+  if (!scan.number || !scan.bottom) return [];
+  const set = await jaSetBeforeNumber(scan.bottom).catch(() => undefined);
+  if (!set) return [];
+  const cards = await searchJaByNumber(scan.number).catch(() => []);
+  return cards.filter((c) => c.set.id === set.id);
+}
+
 /** Cards matching what was read, best first. */
 export async function findCandidates(scan: ScanText): Promise<PokemonCard[]> {
+  const japanese = await findJapanese(scan);
+  if (japanese.length) return japanese;
+
   const byName = (cards: PokemonCard[]) =>
     scan.name ? [...cards].sort((a, b) => Number(similar(b.name, scan.name!)) - Number(similar(a.name, scan.name!))) : cards;
 

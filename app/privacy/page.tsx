@@ -66,6 +66,8 @@ export default function PrivacyPage() {
         <li><strong>TCGdex</strong> provides card details, images and prices, and <strong>pokemontcg.io</strong> provides some
           card images. Your device requests this information directly from them, so, like any website, they receive
           your IP address. We don’t send them your account or collection information.</li>
+        <li><strong>Frankfurter</strong> (api.frankfurter.dev) provides the daily euro to dollar exchange rate used for
+          Japanese card prices. Your device requests it directly; it receives your IP address and nothing else.</li>
         <li><strong>TCGplayer:</strong> price links open TCGplayer’s website, which has its own privacy policy.</li>
       </ul>
 

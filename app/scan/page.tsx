@@ -162,7 +162,7 @@ function ResultStep({ card, loading, onScanAnother }: { card: PokemonCard; loadi
         )}
         {!loading && market != null && (
           <p className="px-5 py-3 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40">
-            Near Mint is the TCGplayer market price{card.tcgplayer?.updatedAt ? ` (updated ${new Date(card.tcgplayer.updatedAt).toLocaleDateString()})` : ""}.
+            Near Mint is the {card.priceSource === "cardmarket" ? "Cardmarket price trend, converted from euros" : "TCGplayer market price"}{card.tcgplayer?.updatedAt ? ` (updated ${new Date(card.tcgplayer.updatedAt).toLocaleDateString()})` : ""}.
             Other conditions are estimates using common discounts.
           </p>
         )}

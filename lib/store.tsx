@@ -23,7 +23,7 @@ interface StoreContextValue {
   reorderItems:        (fromId: string, toId: string) => void;
   addCustomCard:       (itemId: string, card: CustomCardDef) => void;
   removeCustomCard:    (itemId: string, cardId: string) => void;
-  updateItem:          (id: string, updates: { label?: string; subtitle?: string }) => void;
+  updateItem:          (id: string, updates: { label?: string; subtitle?: string; image?: string }) => void;
   collectionCardIds:   string[];
   addCollectionCard:   (cardId: string) => void;
   removeCollectionCard:(cardId: string) => void;
@@ -363,13 +363,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  function updateItem(id: string, updates: { label?: string; subtitle?: string }) {
+  function updateItem(id: string, updates: { label?: string; subtitle?: string; image?: string }) {
     setTrackedItems((prev) =>
       prev.map((t) => {
         if (t.id !== id) return t;
         const next = { ...t, ...updates };
         if (user) {
-          persist("updateItem", { kind: "update", table: "tracked_master_sets", values: { label: next.label, subtitle: next.subtitle ?? null }, match: { user_id: user.id, item_id: id } });
+          persist("updateItem", { kind: "update", table: "tracked_master_sets", values: { label: next.label, subtitle: next.subtitle ?? null, ...(updates.image !== undefined && { image: next.image }) }, match: { user_id: user.id, item_id: id } });
         }
         return next;
       })
