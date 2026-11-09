@@ -27,13 +27,7 @@ interface Props {
 
 export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) {
   const { removeItem } = useStore();
-  const { id, label, image, totalCards, ownedCards, type, subtitle } = tracked;
-  // Count cards, not versions: a card with several owned versions counts once.
-  const owned = ownedCardIds(ownedCards).size;
-  const pct = totalCards > 0 ? Math.round((owned / totalCards) * 100) : 0;
-  // Custom sets: you mark them complete; until then the total isn't settled.
-  const ongoingCustom = type === "custom" && tracked.status !== "complete";
-  const complete = type === "custom" ? tracked.status === "complete" : totalCards > 0 && owned >= totalCards;
+  const { id, label } = tracked;
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -123,66 +117,7 @@ export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) 
 
   const href = masterSetHref(tracked);
 
-  const cardContent = (
-    <>
-      <div className="flex items-center gap-4 mb-4">
-        {image ? (
-          <Image
-            src={image}
-            alt={label}
-            width={type === "set" ? 80 : 56}
-            height={type === "set" ? 32 : 78}
-            className="object-contain rounded shrink-0"
-            unoptimized
-          />
-        ) : (
-          <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 text-gray-400"><CardsIcon className="w-7 h-7" /></div>
-        )}
-        <div className="min-w-0">
-          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">{label}</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5">
-            {type === "pokemon" ? "Master Set" : type === "artist" ? "Artist Collection" : type === "custom" ? "Custom Set" : (subtitle ?? "Set")}
-            {/* Custom sets carry the status you set (ongoing unless marked complete). */}
-            {type === "custom" && (
-              tracked.status === "complete" ? (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-semibold">
-                  <CheckIcon className="w-3 h-3" /> Complete
-                </span>
-              ) : (
-                <span className="px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-semibold">Ongoing</span>
-              )
-            )}
-          </p>
-        </div>
-      </div>
-
-      {totalCards > 0 || type === "custom" ? (
-        <>
-          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mb-1.5">
-            <span className={ongoingCustom ? "text-gray-500 dark:text-gray-400" : ""}>{owned} / {ongoingCustom ? "?" : totalCards} cards</span>
-            {!ongoingCustom && <span className={complete ? "text-green-600 dark:text-green-400 font-semibold" : ""}>{pct}%</span>}
-          </div>
-          <div className={`w-full rounded-full h-1.5 overflow-hidden ${ongoingCustom ? "bg-gray-100/70 dark:bg-gray-700/60" : "bg-gray-100 dark:bg-gray-700"}`}>
-            {!ongoingCustom && (
-              <div
-                className={`h-1.5 rounded-full transition-all duration-500 ${complete ? "bg-green-500" : "bg-blue-500"}`}
-                style={{ width: `${pct}%` }}
-              />
-            )}
-          </div>
-          {complete && (
-            <p className="mt-2 flex items-center justify-center gap-1 text-xs text-green-600 dark:text-green-400 font-semibold">
-              <TrophyIcon className="w-4 h-4" /> {type === "custom" ? "Custom Set Complete!" : "Master Set Complete!"}
-            </p>
-          )}
-        </>
-      ) : (
-        owned > 0 ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500">{owned} cards owned</p>
-        ) : null
-      )}
-    </>
-  );
+  const cardContent = <MasterSetSummary tracked={tracked} />;
 
   return (
     <>
@@ -264,6 +199,77 @@ export default function MasterSetCard({ tracked, isEditing, index = 0 }: Props) 
             </div>
           </div>
         </div>
+      )}
+    </>
+  );
+}
+
+/** Picture, name and progress of a master set: the inside of a home-screen tile. */
+export function MasterSetSummary({ tracked }: { tracked: TrackedMasterSet }) {
+  const { label, image, totalCards, ownedCards, type, subtitle } = tracked;
+  // Count cards, not versions: a card with several owned versions counts once.
+  const owned = ownedCardIds(ownedCards).size;
+  const pct = totalCards > 0 ? Math.round((owned / totalCards) * 100) : 0;
+  // Custom sets: you mark them complete; until then the total isn't settled.
+  const ongoingCustom = type === "custom" && tracked.status !== "complete";
+  const complete = type === "custom" ? tracked.status === "complete" : totalCards > 0 && owned >= totalCards;
+  return (
+    <>
+      <div className="flex items-center gap-4 mb-4">
+        {image ? (
+          <Image
+            src={image}
+            alt={label}
+            width={type === "set" ? 80 : 56}
+            height={type === "set" ? 32 : 78}
+            className="object-contain rounded shrink-0"
+            unoptimized
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 text-gray-400"><CardsIcon className="w-7 h-7" /></div>
+        )}
+        <div className="min-w-0">
+          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">{label}</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5">
+            {type === "pokemon" ? "Master Set" : type === "artist" ? "Artist Collection" : type === "custom" ? "Custom Set" : (subtitle ?? "Set")}
+            {/* Custom sets carry the status you set (ongoing unless marked complete). */}
+            {type === "custom" && (
+              tracked.status === "complete" ? (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-semibold">
+                  <CheckIcon className="w-3 h-3" /> Complete
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-semibold">Ongoing</span>
+              )
+            )}
+          </p>
+        </div>
+      </div>
+
+      {totalCards > 0 || type === "custom" ? (
+        <>
+          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mb-1.5">
+            <span className={ongoingCustom ? "text-gray-500 dark:text-gray-400" : ""}>{owned} / {ongoingCustom ? "?" : totalCards} cards</span>
+            {!ongoingCustom && <span className={complete ? "text-green-600 dark:text-green-400 font-semibold" : ""}>{pct}%</span>}
+          </div>
+          <div className={`w-full rounded-full h-1.5 overflow-hidden ${ongoingCustom ? "bg-gray-100/70 dark:bg-gray-700/60" : "bg-gray-100 dark:bg-gray-700"}`}>
+            {!ongoingCustom && (
+              <div
+                className={`h-1.5 rounded-full transition-all duration-500 ${complete ? "bg-green-500" : "bg-blue-500"}`}
+                style={{ width: `${pct}%` }}
+              />
+            )}
+          </div>
+          {complete && (
+            <p className="mt-2 flex items-center justify-center gap-1 text-xs text-green-600 dark:text-green-400 font-semibold">
+              <TrophyIcon className="w-4 h-4" /> {type === "custom" ? "Custom Set Complete!" : "Master Set Complete!"}
+            </p>
+          )}
+        </>
+      ) : (
+        owned > 0 ? (
+          <p className="text-xs text-gray-400 dark:text-gray-500">{owned} cards owned</p>
+        ) : null
       )}
     </>
   );

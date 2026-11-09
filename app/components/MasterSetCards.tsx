@@ -16,13 +16,14 @@ import { SearchIcon } from "./Icons";
 interface Props {
   cards: PokemonCard[];
   ownedKeys: string[];
-  onToggle: (key: string) => void;
+  /** Omit for a read-only view (a friend's shared collection). */
+  onToggle?: (key: string) => void;
   /** Show each card's set in the What's left list (Pokémon and artist pages span sets). */
   showSetNames?: boolean;
   /** Offer Quick add by card number (set pages only; numbers repeat across sets). */
   quickAdd?: boolean;
-  /** Identifies this page for "Save for offline" (e.g. "set:sv03.5"). */
-  offlineKey: string;
+  /** Identifies this page for "Save for offline" (e.g. "set:sv03.5"); omit to hide it. */
+  offlineKey?: string;
 }
 
 type Filter = "all" | "owned" | "missing";
@@ -94,9 +95,9 @@ export default function MasterSetCards({ cards, ownedKeys, onToggle, showSetName
 
   return (
     <>
-      <SaveOffline saveKey={offlineKey} cards={cards} />
+      {offlineKey && <SaveOffline saveKey={offlineKey} cards={cards} />}
 
-      {quickAdd && <QuickAdd cards={cards} owned={owned} onToggle={onToggle} />}
+      {quickAdd && onToggle && <QuickAdd cards={cards} owned={owned} onToggle={onToggle} />}
 
       <div role="search" className="mb-3">
         <label className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 transition-all">
