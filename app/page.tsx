@@ -16,8 +16,9 @@ import MasterSetCard from "./components/PokemonMasterSetCard";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import AuthModal from "./components/AuthModal";
+import ShareCollectionSheet from "./components/ShareCollectionSheet";
 import { APP_NAME } from "@/lib/appInfo";
-import { CardsIcon } from "./components/Icons";
+import { CardsIcon, ShareIcon } from "./components/Icons";
 
 export default function Home() {
   const { trackedItems, reorderItems, addItem } = useStore();
@@ -26,6 +27,7 @@ export default function Home() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [customName, setCustomName] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -121,6 +123,8 @@ export default function Home() {
         </div>
       )}
 
+      {shareOpen && <ShareCollectionSheet onClose={() => setShareOpen(false)} />}
+
       {trackedItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center text-gray-400 dark:text-gray-600">
           <CardsIcon className="w-14 h-14 mb-4" />
@@ -133,6 +137,13 @@ export default function Home() {
             <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
               Tracking {trackedItems.length} master set{trackedItems.length !== 1 ? "s" : ""}
             </h2>
+            <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShareOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] rounded-full text-sm font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              <ShareIcon className="w-4 h-4" /> Share
+            </button>
             <button
               onClick={() => setIsEditing((v) => !v)}
               aria-pressed={isEditing}
@@ -144,6 +155,7 @@ export default function Home() {
             >
               {isEditing ? "Done" : "Edit Sets"}
             </button>
+            </div>
           </div>
           <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Click on a card to view and track its cards.</p>
 

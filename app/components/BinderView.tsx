@@ -11,7 +11,8 @@ const POCKETS = 9;
 
 interface Props {
   tiles: CardTile[];
-  onToggle: (key: string) => void;
+  /** Omit for a read-only binder (a shared collection). */
+  onToggle?: (key: string) => void;
 }
 
 // Cards in order on 9-pocket binder pages. Phones show one page and swipe
@@ -105,18 +106,23 @@ export default function BinderView({ tiles, onToggle }: Props) {
   );
 }
 
-function Pocket({ tile, onToggle }: { tile: CardTile; onToggle: (key: string) => void }) {
+function Pocket({ tile, onToggle }: { tile: CardTile; onToggle?: (key: string) => void }) {
   const { card, variant, owned } = tile;
   const [justAdded, setJustAdded] = useState(false);
   const label = variant ? VARIANT_LABELS[variant].long : null;
+  const name = `${card.name}${label ? ` ${label}` : ""} #${card.number}`;
+  // Read-only pockets are plain pictures; there's nothing to tap.
+  const Pocket = onToggle ? "button" : "div";
 
   return (
-    <button
-      onClick={() => { tapFeedback(); setJustAdded(!owned); onToggle(tile.key); }}
-      onAnimationEnd={() => setJustAdded(false)}
-      aria-pressed={owned}
-      aria-label={`${card.name}${label ? ` ${label}` : ""} #${card.number} — ${owned ? "Owned, tap to unmark" : "Not owned, tap to mark as owned"}`}
-      className={`relative aspect-[146/204] rounded-md overflow-hidden transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+    <Pocket
+      {...(onToggle ? {
+        onClick: () => { tapFeedback(); setJustAdded(!owned); onToggle(tile.key); },
+        onAnimationEnd: () => setJustAdded(false),
+        "aria-pressed": owned,
+        "aria-label": `${name} — ${owned ? "Owned, tap to unmark" : "Not owned, tap to mark as owned"}`,
+      } : { role: "img", "aria-label": `${name} — ${owned ? "Owned" : "Missing"}` })}
+      className={`relative block aspect-[146/204] rounded-md overflow-hidden ${onToggle ? "transition-transform active:scale-95" : ""} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
         owned
           ? "shadow-md"
           : "border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white/60 dark:bg-gray-900/40"
@@ -139,7 +145,7 @@ function Pocket({ tile, onToggle }: { tile: CardTile; onToggle: (key: string) =>
           {label}
         </span>
       )}
-    </button>
+    </Pocket>
   );
 }
 

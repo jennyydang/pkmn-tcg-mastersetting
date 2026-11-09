@@ -11,7 +11,7 @@ export default function PrivacyPage() {
     <article className="max-w-2xl mx-auto text-sm leading-relaxed text-gray-700 dark:text-gray-300 space-y-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-gray-900 [&_h2]:dark:text-gray-100 [&_h2]:pt-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1">
       <Link href="/" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">← Home</Link>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Privacy Policy</h1>
-      <p className="text-gray-500 dark:text-gray-400">Effective October 19, 2026</p>
+      <p className="text-gray-500 dark:text-gray-400">Effective November 9, 2026</p>
 
       <p>
         {APP_NAME} helps you track your Pokémon Trading Card Game collection. This policy explains what
@@ -36,6 +36,14 @@ export default function PrivacyPage() {
         When you send feedback, we store your message, the screen you sent it from and, if you choose, your app
         version and device type and an email address for a reply. Feedback isn’t linked to your account. To have
         feedback that includes your email deleted, contact us.
+      </p>
+
+      <h2>Sharing your collection</h2>
+      <p>
+        If you create a share link, anyone who has the link can see the master sets you track, which of their cards
+        you own and which you’re missing, and the name you chose to show, if any. They can’t see your email, copy
+        details, prices paid, wishlist or anything else, and they can’t change anything. Nothing is shared until you
+        create a link, and you can stop sharing or replace the link at any time; the old link stops working right away.
       </p>
 
       <h2>Camera and photos</h2>

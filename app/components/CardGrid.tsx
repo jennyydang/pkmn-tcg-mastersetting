@@ -23,7 +23,8 @@ export interface CardTile {
 interface CardItemProps {
   tile: CardTile;
   index: number;
-  onToggle: () => void;
+  /** Omitted when read-only: tapping the card then shows its price instead. */
+  onToggle?: () => void;
   onInfo: () => void;
 }
 
@@ -35,6 +36,7 @@ function CardItem({ tile, index, onToggle, onInfo }: CardItemProps) {
   const label = variant ? ` ${VARIANT_LABELS[variant].long}` : "";
 
   function handleToggle() {
+    if (!onToggle) { onInfo(); return; }
     tapFeedback();
     setPulse(!owned);
     onToggle();
@@ -46,8 +48,10 @@ function CardItem({ tile, index, onToggle, onInfo }: CardItemProps) {
         onClick={handleToggle}
         {...tiltHandlers}
         onAnimationEnd={(e) => { if (e.animationName === "owned-pulse") setPulse(false); }}
-        aria-label={`${card.name}${label} #${card.number} — ${owned ? "Owned, click to unmark" : "Not owned, click to mark as owned"}`}
-        aria-pressed={owned}
+        aria-label={`${card.name}${label} #${card.number} — ${
+          !onToggle ? `${owned ? "Owned" : "Missing"}, click for price` : owned ? "Owned, click to unmark" : "Not owned, click to mark as owned"
+        }`}
+        aria-pressed={onToggle ? owned : undefined}
         className={`tile relative w-full rounded-lg overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
           owned ? "opacity-100 shadow-md" : "opacity-50 hover:opacity-70"
         } ${pulse ? "owned-pulse" : ""}`}
@@ -86,7 +90,7 @@ function CardItem({ tile, index, onToggle, onInfo }: CardItemProps) {
           </div>
         )}
       </button>
-      <button
+      {onToggle && <button
         onClick={(e) => { e.stopPropagation(); onInfo(); }}
         aria-label={`View price for ${card.name}`}
         className="absolute top-0 left-0 w-11 h-11 flex items-center justify-center transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
@@ -94,14 +98,15 @@ function CardItem({ tile, index, onToggle, onInfo }: CardItemProps) {
         <span className="w-5 h-5 bg-black/50 group-hover:bg-black/70 rounded-full flex items-center justify-center" aria-hidden="true">
           <span className="text-white text-[10px] font-bold leading-none">i</span>
         </span>
-      </button>
+      </button>}
     </div>
   );
 }
 
 interface Props {
   tiles: CardTile[];
-  onToggle: (key: string) => void;
+  /** Omit for a read-only grid (a shared collection). */
+  onToggle?: (key: string) => void;
 }
 
 export default function CardGrid({ tiles, onToggle }: Props) {
@@ -134,7 +139,7 @@ export default function CardGrid({ tiles, onToggle }: Props) {
             key={tile.key}
             tile={tile}
             index={i}
-            onToggle={() => onToggle(tile.key)}
+            onToggle={onToggle && (() => onToggle(tile.key))}
             onInfo={() => openPrice(tile)}
           />
         ))}
@@ -144,6 +149,7 @@ export default function CardGrid({ tiles, onToggle }: Props) {
           card={priceCard}
           loading={priceLoading}
           cardKey={priceTile?.key}
+          readOnly={!onToggle}
           owned={priceTile?.owned}
           onClose={() => { setPriceOpen(false); setPriceCard(null); }}
         />

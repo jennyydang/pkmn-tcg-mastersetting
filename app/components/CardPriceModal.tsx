@@ -14,6 +14,8 @@ interface Props {
   cardKey?: string;
   /** Show the My copies section (quantity, condition, price paid). */
   owned?: boolean;
+  /** Someone else's card (a shared collection): prices only, no wishlist or copies. */
+  readOnly?: boolean;
 }
 
 function formatPriceType(key: string) {
@@ -25,7 +27,7 @@ function fmt(n?: number) {
   return `$${n.toFixed(2)}`;
 }
 
-export default function CardPriceModal({ card, loading, onClose, cardKey, owned = false }: Props) {
+export default function CardPriceModal({ card, loading, onClose, cardKey, owned = false, readOnly = false }: Props) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -139,7 +141,7 @@ export default function CardPriceModal({ card, loading, onClose, cardKey, owned 
           </div>
 
           {/* Cards you own: your copies (per version); others: the wishlist */}
-          {card && !loading && (
+          {card && !loading && !readOnly && (
             <div className="space-y-3 pb-4">
               {!owned ? (
                 <WantControls
